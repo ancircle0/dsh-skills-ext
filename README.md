@@ -4,7 +4,7 @@
 
 - 链接使用**目录联接（junction，Windows，无需管理员权限）**，其他平台使用**符号链接**；
 - 解除链接**只删除链接本身**，源目录与其中的文件完全不受影响；
-- 链接/解除链接后**立即生效**：插件随后调用技能注册表的缓存失效入口（`invalidateCache()`，也就是监视器最终会做的事：`revision + 1`、清空收集缓存、广播 `skills/change`），所以**同一个会话的下一条消息**就能看到技能增减，既不用重启也不用新建会话（正在进行的那一次请求不会中途改变）。
+- 链接/解除链接后**立即生效，不用重启也不用新建会话**：插件随后 ① 让技能注册表失效缓存（`invalidateCache()`：`revision + 1`、清空收集缓存、广播 `skills/change`），模型在当前会话的**下一条消息**就能看到技能增减；② 再广播一次"配置已变"的刷新信号，让 `/` 技能选择器这类**客户端缓存**也重拉——所以下次打开 `/` 就是最新结果（正在进行的那一次请求不会中途改变）。
 
 > English: a DSH Harness plugin that keeps preset skill directories and links/unlinks the skills inside them into the user skill root. Linking creates a directory junction on Windows (no admin rights needed) and a symlink elsewhere; unlinking removes only the link and never touches the source directory.
 
