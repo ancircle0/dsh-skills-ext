@@ -37,21 +37,15 @@
 
 ## 安装
 
-从 npm 安装到当前 DSH profile：
+在 DSH 界面里从 npm 安装：
 
-```json
-{ "action": "install_bundle", "target": "dsh-skills-ext" }
-```
+1. 侧边栏打开「**插件**」页；
+2. 点「**添加插件**」→「**安装第三方插件**」；
+3. 在「包名或地址」里填 `dsh-skills-ext`（需要固定版本时填 `dsh-skills-ext@0.1.0`），点「**安装**」。
 
-（也可以指定版本：`"target": "dsh-skills-ext@0.1.0"`。）
+安装后插件立即生效（安装即启用）。升级时在插件页卸载，再按上面步骤安装新版本。
 
-从本地目录安装（开发时）：
-
-```json
-{ "action": "install_bundle", "target": "E:\\playground\\dsh-skills-ext" }
-```
-
-安装后到「设置 → Skills 管理」或点侧边栏图标即可使用。
+装好后从「设置 → Skills 管理」或侧边栏的 Skills 图标进入使用。
 
 ## 兼容性
 
