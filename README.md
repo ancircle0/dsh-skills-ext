@@ -4,7 +4,7 @@
 
 - 链接使用**目录联接（junction，Windows，无需管理员权限）**，其他平台使用**符号链接**；
 - 解除链接**只删除链接本身**，源目录与其中的文件完全不受影响；
-- 链接后 DSH 自带的技能监视器（chokidar）会自动发现新技能，无需重启。
+- 链接/解除链接后**不用重启，也不用新建会话**：DSH 自带的技能监视器（chokidar）会发现目录变化，插件还会在链接/解除后主动广播一次 `skills/change`，让技能目录尽快重扫。新技能以"替换目录"的形式在**同一个会话的下一条消息**里生效（正在进行的那一次请求不会中途改变）。
 
 > English: a DSH Harness plugin that keeps preset skill directories and links/unlinks the skills inside them into the user skill root. Linking creates a directory junction on Windows (no admin rights needed) and a symlink elsewhere; unlinking removes only the link and never touches the source directory.
 
