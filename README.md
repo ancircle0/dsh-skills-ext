@@ -51,13 +51,14 @@
 
 - 需要目标 DSH 版本提供 `settings.section`、`sidebar.panellist`、`main`、`shell.overlay` 插槽与 `ctx.remote`（本插件在 `0.2.1-rc.3` 上开发验证）。
 - 插件通过 `typert` 清单发布 `skillsExt` Remote 服务；宿主未暴露某个 UI 能力时，相应功能会**自行降级**而不是报错（例如导航图标退回默认齿轮、侧边栏开关显示"当前版本不支持"）。
+- **不依赖任何宿主包**：Host 半只 import `node:*` 内置模块，服务用 `ctx.reflect.provide()` 发布、Remote 标记手写（等价于 `TypertRemoteService` + `@Remote` 生成的两条记录），因此从 npm 安装即可加载，不会出现 `Cannot find package '@deepseek-ai/...'`。
 
 ## 结构
 
 | 文件 | 作用 |
 |---|---|
-| `index.js` | Host 入口，导出 Cordis 服务类 |
-| `lib/service.js` | `skillsExt` 服务：返回页面快照，失败抛 `RemoteError` |
+| `index.js` | Host 入口，导出 `apply(ctx, config)` |
+| `lib/service.js` | 纯插件：发布 `skillsExt` 服务，方法返回页面快照，失败抛带 `code` 的错误 |
 | `lib/core.js` | 纯文件系统逻辑：预设读写、技能扫描、链接状态、链接创建/删除 |
 | `typert.host.js` | Typert Host 清单，声明 `skillsExt` 的 Remote 描述符 |
 | `client.js` | Web 端：设置页/侧边栏面板、吐司、导航图标注入、Remote 客户端 |

@@ -1,6 +1,6 @@
 {
   "name": "dsh-skills-ext",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DSH Harness plugin: keep preset skill directories and link their skills into the user skill root (directory junction on Windows, symlink elsewhere).",
   "type": "module",
   "main": "index.js",
@@ -60,9 +60,5 @@
     "client": {
       "platform": "web"
     }
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.5",
-    "@deepseek-ai/dsh-typert-protocol": "^0.1.7-rc.0 || ^0.2.0-rc.1 || ^0.2.1-rc.0"
   }
 }

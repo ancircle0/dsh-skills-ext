@@ -1,9 +1,9 @@
 /**
  * dsh-skills-ext — Host entry.
  *
- * Re-exports the Cordis class plugin. DSH's loader imports the package root and
- * instantiates the default export with `(ctx, config)`.
+ * DSH's loader imports the package root and calls the default export with
+ * `(ctx, config)`. Nothing here imports a harness package: the plugin must load
+ * from an npm installation, where only `node:*` builtins resolve.
  */
 
-export { SkillsExtService } from "./lib/service.js";
-export { default } from "./lib/service.js";
+export { apply, default } from "./lib/service.js";

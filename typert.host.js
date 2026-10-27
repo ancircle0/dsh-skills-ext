@@ -6,32 +6,20 @@
  * the browser Client can call
  * `ctx.remote.skillsExt.{state, addPreset, removePreset, link, unlink}`.
  *
- * Strict codecs must carry a `create()` factory. Request parameters are validated
- * with Zod when this Host can resolve it (pass-through otherwise); results are
- * declared permissive on purpose, because a method returns the page snapshot
- * and every rule already lives in `lib/core.js`, so a rejected call keeps its own
- * readable reason instead of being flattened into a wire validation error.
+ * Strict codecs must carry a `create()` factory. Every codec here is
+ * pass-through on purpose: this manifest has to load without any runtime
+ * dependency (a plugin installed from npm can only import `node:*`), and every
+ * rule lives in `lib/core.js`, which answers with a coded failure — so a rejected
+ * call keeps its own readable reason instead of a flattened wire error.
  */
 
-let z = null;
-try {
-  ({ z } = await import("zod"));
-} catch {
-  z = null;
-}
-
-/** Pass-through schema: a result is handed back exactly as the method returned it. */
+/** Pass-through schema: values cross the wire exactly as the method produced them. */
 function passthroughSchema() {
   return {
     parse: (value) => value,
     safeParse: (value) => ({ success: true, data: value }),
   };
 }
-
-const pathRequestSchema = () => (z === null ? passthroughSchema() : z.object({ path: z.string() }));
-const linkRequestSchema = () =>
-  z === null ? passthroughSchema() : z.object({ name: z.string(), dir: z.string() });
-const nameRequestSchema = () => (z === null ? passthroughSchema() : z.object({ name: z.string() }));
 
 /**
  * Build a strict codec that satisfies both DSH codec generations.
@@ -65,7 +53,7 @@ const INVOCATIONS = [
     namespace: "skillsExt",
     method: "addPreset",
     invocation: { kind: "direct" },
-    parameters: [{ name: "request", wire: "request", source: "json", codec: strictCodec("dsh-skills-ext#SkillsExtPathRequest", pathRequestSchema) }],
+    parameters: [{ name: "request", wire: "request", source: "json", codec: strictCodec("dsh-skills-ext#SkillsExtPathRequest", passthroughSchema) }],
     result: strictCodec("dsh-skills-ext#SkillsExtSnapshot", passthroughSchema),
   },
   {
@@ -74,7 +62,7 @@ const INVOCATIONS = [
     namespace: "skillsExt",
     method: "removePreset",
     invocation: { kind: "direct" },
-    parameters: [{ name: "request", wire: "request", source: "json", codec: strictCodec("dsh-skills-ext#SkillsExtPathRequest", pathRequestSchema) }],
+    parameters: [{ name: "request", wire: "request", source: "json", codec: strictCodec("dsh-skills-ext#SkillsExtPathRequest", passthroughSchema) }],
     result: strictCodec("dsh-skills-ext#SkillsExtSnapshot", passthroughSchema),
   },
   {
@@ -83,7 +71,7 @@ const INVOCATIONS = [
     namespace: "skillsExt",
     method: "link",
     invocation: { kind: "direct" },
-    parameters: [{ name: "request", wire: "request", source: "json", codec: strictCodec("dsh-skills-ext#SkillsExtLinkRequest", linkRequestSchema) }],
+    parameters: [{ name: "request", wire: "request", source: "json", codec: strictCodec("dsh-skills-ext#SkillsExtLinkRequest", passthroughSchema) }],
     result: strictCodec("dsh-skills-ext#SkillsExtSnapshot", passthroughSchema),
   },
   {
@@ -92,7 +80,7 @@ const INVOCATIONS = [
     namespace: "skillsExt",
     method: "unlink",
     invocation: { kind: "direct" },
-    parameters: [{ name: "request", wire: "request", source: "json", codec: strictCodec("dsh-skills-ext#SkillsExtNameRequest", nameRequestSchema) }],
+    parameters: [{ name: "request", wire: "request", source: "json", codec: strictCodec("dsh-skills-ext#SkillsExtNameRequest", passthroughSchema) }],
     result: strictCodec("dsh-skills-ext#SkillsExtSnapshot", passthroughSchema),
   },
 ];
