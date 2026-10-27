@@ -1,0 +1,68 @@
+{
+  "name": "dsh-skills-ext",
+  "version": "0.1.0",
+  "description": "DSH Harness plugin: keep preset skill directories and link their skills into the user skill root (directory junction on Windows, symlink elsewhere).",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./typert": "./typert.host.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "typert.host.js",
+    "cordis.patch.yml",
+    "lib/*.js",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "deepseek-harness-plugin",
+    "dsh-plugin",
+    "skills",
+    "skill-management",
+    "junction",
+    "symlink"
+  ],
+  "license": "MIT",
+  "author": "ancircle <ancircle@foxmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ancircle0/dsh-skills-ext.git"
+  },
+  "homepage": "https://github.com/ancircle0/dsh-skills-ext#readme",
+  "bugs": {
+    "url": "https://github.com/ancircle0/dsh-skills-ext/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node --check index.js && node --check client.js && node --check typert.host.js && node --check lib/core.js && node --check lib/service.js",
+    "test": "node test/core.test.mjs",
+    "verify": "npm run check && npm test",
+    "pack:check": "npm pack --dry-run"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.5",
+    "@deepseek-ai/dsh-typert-protocol": "^0.1.7-rc.0 || ^0.2.0-rc.1 || ^0.2.1-rc.0"
+  }
+}

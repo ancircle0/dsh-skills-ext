@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Skills Manager",
+    "description": "Maintain preset skill directories from a Settings sidebar page, list the skills inside them, and link or unlink any single skill into .dsh/skills as a directory junction that never touches the source folder."
+  }
+}
