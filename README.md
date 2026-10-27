@@ -33,7 +33,7 @@
 | 技能根目录（链接目标） | `$DSH_HOME/skills`，默认 `~/.dsh/skills` |
 | 插件私有配置 | `$DSH_HOME/skills-ext/presets.json` |
 
-路径全部在宿主侧按平台解析（`$DSH_HOME` 或 `os.homedir() + '.dsh'`，用 `path.join` 拼接），Windows 显示 `C:\Users\<你>\.dsh\skills`，macOS / Linux 显示 `/Users/<你>/.dsh/skills`。
+路径全部在宿主侧按平台解析（`$DSH_HOME`，未设置时用 `os.homedir()` 加 `.dsh`，再用 `path.join` 拼接 `skills`），所以 Windows 上是 `%USERPROFILE%\.dsh\skills`，macOS / Linux 上是 `~/.dsh/skills`；代码里不出现任何具体机器的绝对路径。
 
 ## 安装
 
