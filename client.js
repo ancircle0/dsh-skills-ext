@@ -891,7 +891,7 @@ window.__ModuleLoader__.load({
         if (linkState === "linked") {
           action = h(
             ActionButton,
-            { variant: "ghost", danger: true, disabled: busy, onClick: () => onUnlink(skill) },
+            { variant: "outline", danger: true, disabled: busy, onClick: () => onUnlink(skill) },
             pending === unlinkKey ? t("skills.busy") : t("skills.unlink"),
           );
         } else if (linkState === "missing") {
@@ -908,7 +908,7 @@ window.__ModuleLoader__.load({
           const label = linkState === "conflict" ? t("skills.conflict") : t("skills.occupied");
           action = h(
             ActionButton,
-            { variant: "ghost", disabled: true, title: skill.actual || skill.target || "" },
+            { variant: "outline", disabled: true, title: skill.actual || skill.target || "" },
             label,
           );
         }
@@ -1074,7 +1074,7 @@ window.__ModuleLoader__.load({
                       h(
                         ActionButton,
                         {
-                          variant: "ghost",
+                          variant: "outline",
                           danger: true,
                           disabled: busy,
                           onClick: () => onRemovePreset(preset.path),
@@ -1096,7 +1096,7 @@ window.__ModuleLoader__.load({
             h("span", { className: "ske-section-hint" }, t("skills.count", { count: skills.length })),
             h(
               ActionButton,
-              { variant: "ghost", disabled: busy, onClick: () => refresh(true) },
+              { variant: "outline", disabled: busy, onClick: () => refresh(true) },
               pending === "refresh" ? t("skills.busy") : t("skills.refresh"),
             ),
           ),
