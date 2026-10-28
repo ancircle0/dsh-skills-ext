@@ -61,6 +61,18 @@ window.__ModuleLoader__.load({
       if (value !== null && typeof value === "object" && "$$typeof" in value) return value;
       return null;
     })();
+    /** Same defensive resolution for the host's primary button. */
+    const HostButton = (() => {
+      let value;
+      try {
+        value = ui && ui.Button;
+      } catch {
+        return null;
+      }
+      if (typeof value === "function") return value;
+      if (value !== null && typeof value === "object" && "$$typeof" in value) return value;
+      return null;
+    })();
 
     const NS = "skillsExt";
     const PACKAGE = "dsh-skills-ext";
@@ -277,8 +289,8 @@ window.__ModuleLoader__.load({
 .ske-btn{flex:none;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));background:transparent;color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:13px;line-height:18px;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;}
 .ske-btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.1));}
 .ske-btn:disabled{opacity:.55;cursor:default;}
-.ske-btn-primary{border-color:transparent;background:var(--dsw-alias-brand-primary,#4a7dff);color:#fff;}
-.ske-btn-primary:hover:not(:disabled){background:var(--dsw-alias-brand-primary,#4a7dff);opacity:.9;}
+.ske-btn-primary{border-color:transparent;background:var(--dsw-alias-label-primary,var(--dsw-alias-brand-primary,#4a7dff));color:var(--dsw-alias-bg-base,#fff);}
+.ske-btn-primary:hover:not(:disabled){background:var(--dsw-alias-label-primary,var(--dsw-alias-brand-primary,#4a7dff));opacity:.9;}
 .ske-btn-danger:hover:not(:disabled){border-color:var(--dsw-alias-state-error-primary,#d94a4a);color:var(--dsw-alias-state-error-primary,#d94a4a);}
 .ske-list{display:flex;flex-direction:column;gap:2px;}
 .ske-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));}
@@ -1020,11 +1032,21 @@ window.__ModuleLoader__.load({
               { className: "ske-section-hint", title: skillsRoot },
               skillsRoot === "" ? "" : t("presets.hint", { root: skillsRoot }),
             ),
-            h(
-              "button",
-              { type: "button", className: "ske-btn ske-btn-primary", disabled: busy, onClick: onAdd },
-              pending === "add" || pending === "browse" ? t("skills.busy") : t("presets.add"),
-            ),
+            HostButton
+              ? h(
+                  HostButton,
+                  {
+                    variant: "primary",
+                    disabled: busy,
+                    onClick: onAdd,
+                  },
+                  pending === "add" || pending === "browse" ? t("skills.busy") : t("presets.add"),
+                )
+              : h(
+                  "button",
+                  { type: "button", className: "ske-btn ske-btn-primary", disabled: busy, onClick: onAdd },
+                  pending === "add" || pending === "browse" ? t("skills.busy") : t("presets.add"),
+                ),
           ),
           presets.length === 0
             ? h("div", { className: "ske-empty" }, t("presets.empty"))
