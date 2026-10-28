@@ -2,7 +2,8 @@
 
 ## 0.1.3
 
-- 深色模式下「添加」按钮文字与底色同色的问题：按钮优先使用宿主自带的 `Button`（`variant: "primary"`，随主题正确着色），兜底样式改为"前景色填充 + 背景色文字"的反色对，两种主题下都有对比度。
+- **所有动作按钮改用宿主自带的 `Button`**（`@deepseek-ai/dsh-client-ui-primitives`，与宿主各处 UI 同一个组件）：添加/链接用 `primary`，刷新/删除/解除链接用 `ghost`，尺寸随宿主（`sm` / 添加按钮 `md`）。
+- 修复深色模式下「添加」按钮文字与底色同色的问题：此前按钮是自绘的，白字写死 `#fff`、底色用 `brand-primary`；现在兜底样式也改用宿主专用 token（`button-primary-fill` / `button-primary-hover` / `label-primary-foreground`），与宿主按钮完全一致。
 
 ## 0.1.2
 

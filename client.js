@@ -279,7 +279,7 @@ window.__ModuleLoader__.load({
 .ske-switch{position:relative;flex:none;box-sizing:border-box;width:36px;height:20px;padding:0;border:1px solid transparent;border-radius:999px;background:var(--dsw-alias-label-secondary,rgba(128,128,128,.55));cursor:pointer;transition:background .15s ease,border-color .15s ease;appearance:none;-webkit-appearance:none;}
 .ske-switch:disabled{opacity:.5;cursor:default;}
 .ske-switch-knob{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--dsw-alias-bg-base,#fff);box-shadow:0 1px 2px rgba(0,0,0,.28);transition:transform .15s ease;}
-.ske-switch-on{background:var(--dsw-alias-brand-primary,#4a7dff);}
+.ske-switch-on{background:var(--dsw-alias-button-primary-fill,var(--dsw-alias-brand-primary,#4a7dff));}
 .ske-switch-on .ske-switch-knob{transform:translateX(16px);}
 .ske-switch:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,#4a7dff);outline-offset:2px;}
 .ske-section{display:flex;flex-direction:column;gap:8px;}
@@ -289,8 +289,8 @@ window.__ModuleLoader__.load({
 .ske-btn{flex:none;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));background:transparent;color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:13px;line-height:18px;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;}
 .ske-btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.1));}
 .ske-btn:disabled{opacity:.55;cursor:default;}
-.ske-btn-primary{border-color:transparent;background:var(--dsw-alias-label-primary,var(--dsw-alias-brand-primary,#4a7dff));color:var(--dsw-alias-bg-base,#fff);}
-.ske-btn-primary:hover:not(:disabled){background:var(--dsw-alias-label-primary,var(--dsw-alias-brand-primary,#4a7dff));opacity:.9;}
+.ske-btn-primary{border-color:transparent;background:var(--dsw-alias-button-primary-fill,var(--dsw-alias-brand-primary,#4a7dff));color:var(--dsw-alias-label-primary-foreground,#fff);}
+.ske-btn-primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover,var(--dsw-alias-brand-primary,#4a7dff));}
 .ske-btn-danger:hover:not(:disabled){border-color:var(--dsw-alias-state-error-primary,#d94a4a);color:var(--dsw-alias-state-error-primary,#d94a4a);}
 .ske-list{display:flex;flex-direction:column;gap:2px;}
 .ske-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));}
@@ -342,6 +342,26 @@ window.__ModuleLoader__.load({
           stroke: "none",
         }),
       );
+    }
+
+    // ---- action button -------------------------------------------------------
+    /**
+     * One action control. The host's own `Button` whenever this build publishes
+     * the primitives module — the whole shipped UI uses it, so it brings the exact
+     * theme tokens (`button-primary-fill`, `label-primary-foreground`, …) and
+     * geometry — with a same-role fallback for hosts that do not.
+     * @param {object} props - `variant`, optional `danger`/`size`, plus the
+     *   button's own props (`disabled`, `onClick`, `title`) and its label.
+     * @returns {object} React element.
+     */
+    function ActionButton(props) {
+      const variant = props.variant === undefined ? "ghost" : props.variant;
+      const size = props.size === undefined ? "sm" : props.size;
+      const rest = { ...props };
+      for (const key of ["variant", "size", "danger", "children"]) delete rest[key];
+      if (HostButton) return h(HostButton, { variant, size, ...rest }, props.children);
+      const tone = variant === "primary" ? " ske-btn-primary" : props.danger === true ? " ske-btn-danger" : "";
+      return h("button", { type: "button", className: `ske-btn${tone}`, ...rest }, props.children);
     }
 
     // ---- text helpers --------------------------------------------------------
@@ -870,21 +890,15 @@ window.__ModuleLoader__.load({
         let action;
         if (linkState === "linked") {
           action = h(
-            "button",
-            {
-              type: "button",
-              className: "ske-btn ske-btn-danger",
-              disabled: busy,
-              onClick: () => onUnlink(skill),
-            },
+            ActionButton,
+            { variant: "ghost", danger: true, disabled: busy, onClick: () => onUnlink(skill) },
             pending === unlinkKey ? t("skills.busy") : t("skills.unlink"),
           );
         } else if (linkState === "missing") {
           action = h(
-            "button",
+            ActionButton,
             {
-              type: "button",
-              className: "ske-btn ske-btn-primary",
+              variant: "primary",
               disabled: busy || skill.warning !== undefined,
               onClick: () => onLink(skill),
             },
@@ -893,13 +907,8 @@ window.__ModuleLoader__.load({
         } else {
           const label = linkState === "conflict" ? t("skills.conflict") : t("skills.occupied");
           action = h(
-            "button",
-            {
-              type: "button",
-              className: "ske-btn",
-              disabled: true,
-              title: skill.actual || skill.target || "",
-            },
+            ActionButton,
+            { variant: "ghost", disabled: true, title: skill.actual || skill.target || "" },
             label,
           );
         }
@@ -1032,21 +1041,11 @@ window.__ModuleLoader__.load({
               { className: "ske-section-hint", title: skillsRoot },
               skillsRoot === "" ? "" : t("presets.hint", { root: skillsRoot }),
             ),
-            HostButton
-              ? h(
-                  HostButton,
-                  {
-                    variant: "primary",
-                    disabled: busy,
-                    onClick: onAdd,
-                  },
-                  pending === "add" || pending === "browse" ? t("skills.busy") : t("presets.add"),
-                )
-              : h(
-                  "button",
-                  { type: "button", className: "ske-btn ske-btn-primary", disabled: busy, onClick: onAdd },
-                  pending === "add" || pending === "browse" ? t("skills.busy") : t("presets.add"),
-                ),
+            h(
+              ActionButton,
+              { variant: "primary", size: "md", disabled: busy, onClick: onAdd },
+              pending === "add" || pending === "browse" ? t("skills.busy") : t("presets.add"),
+            ),
           ),
           presets.length === 0
             ? h("div", { className: "ske-empty" }, t("presets.empty"))
@@ -1073,10 +1072,10 @@ window.__ModuleLoader__.load({
                       "div",
                       { className: "ske-row-actions" },
                       h(
-                        "button",
+                        ActionButton,
                         {
-                          type: "button",
-                          className: "ske-btn ske-btn-danger",
+                          variant: "ghost",
+                          danger: true,
                           disabled: busy,
                           onClick: () => onRemovePreset(preset.path),
                         },
@@ -1096,13 +1095,8 @@ window.__ModuleLoader__.load({
             h("span", { className: "ske-section-title" }, t("skills.title")),
             h("span", { className: "ske-section-hint" }, t("skills.count", { count: skills.length })),
             h(
-              "button",
-              {
-                type: "button",
-                className: "ske-btn",
-                disabled: busy,
-                onClick: () => refresh(true),
-              },
+              ActionButton,
+              { variant: "ghost", disabled: busy, onClick: () => refresh(true) },
               pending === "refresh" ? t("skills.busy") : t("skills.refresh"),
             ),
           ),
