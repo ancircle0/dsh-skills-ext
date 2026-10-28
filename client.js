@@ -45,34 +45,37 @@ window.__ModuleLoader__.load({
     } catch {
       ui = null;
     }
+    /** The host's snapshot store, resolved the same defensive way. */
+    let storeModule = null;
+    try {
+      storeModule = require("@deepseek-ai/dsh-client-store");
+    } catch {
+      storeModule = null;
+    }
     /**
-     * The host's own on/off control (the one its plugin list uses), resolved
-     * defensively so an older host without the export still gets the fallback.
-     * Same pattern as `dsh-archive-ext`.
+     * Resolve one host widget from the primitives module. The shell seeds that
+     * module for every bundle, so it is normally present; the null branch only
+     * covers an older host, where the caller renders its local equivalent.
+     * @param {string} name - export name (`Switch`, `Button`, `Tooltip`, …).
+     * @returns {any} the component, or null.
      */
-    const HostSwitch = (() => {
+    function hostWidget(name) {
       let value;
       try {
-        value = ui && ui.Switch;
+        value = ui && ui[name];
       } catch {
         return null;
       }
       if (typeof value === "function") return value;
       if (value !== null && typeof value === "object" && "$$typeof" in value) return value;
       return null;
-    })();
-    /** Same defensive resolution for the host's primary button. */
-    const HostButton = (() => {
-      let value;
-      try {
-        value = ui && ui.Button;
-      } catch {
-        return null;
-      }
-      if (typeof value === "function") return value;
-      if (value !== null && typeof value === "object" && "$$typeof" in value) return value;
-      return null;
-    })();
+    }
+    const HostSwitch = hostWidget("Switch");
+    const HostButton = hostWidget("Button");
+    const HostTooltip = hostWidget("Tooltip");
+    const HostTag = hostWidget("Tag");
+    const HostPathLabel = hostWidget("PathLabel");
+    const HostToast = hostWidget("Toast");
 
     const NS = "skillsExt";
     const PACKAGE = "dsh-skills-ext";
@@ -161,7 +164,7 @@ window.__ModuleLoader__.load({
       "page.intro":
         "维护预设的技能目录，并把其中的技能链接到当前 DSH 用户技能目录。链接使用目录联接（junction），解除链接只删除链接，源目录不受影响。",
       "presets.title": "预设路径",
-      "presets.hint": "链接目标：{root}",
+      "presets.hintLabel": "链接目标：",
       "presets.add": "添加",
       "presets.remove": "删除",
       "presets.empty": "还没有预设路径。添加一个包含技能目录（每个技能一个子目录，里面是 SKILL.md）的路径。",
@@ -215,7 +218,7 @@ window.__ModuleLoader__.load({
       "page.intro":
         "Maintain preset skill directories and link the skills they contain into this DSH user skill root. Linking creates a directory junction; unlinking removes only the link and leaves the source untouched.",
       "presets.title": "Preset paths",
-      "presets.hint": "Link target: {root}",
+      "presets.hintLabel": "Link target: ",
       "presets.add": "Add",
       "presets.remove": "Remove",
       "presets.empty":
@@ -264,11 +267,9 @@ window.__ModuleLoader__.load({
 .ske-surface-heading{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
 .ske-surface-title{min-width:0;font-weight:500;font-size:16px;line-height:24px;color:var(--dsw-alias-label-primary,inherit);}
 .ske-surface-count{flex:none;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary,inherit);}
-.ske-tip{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:18px;height:18px;border-radius:50%;color:var(--dsw-alias-label-secondary,inherit);cursor:help;outline:none;}
-.ske-tip:hover,.ske-tip:focus-visible{color:var(--dsw-alias-label-primary,inherit);}
-.ske-tip:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-brand-primary,#4a7dff);}
-.ske-tip-body{display:none;position:absolute;top:24px;left:-10px;z-index:30;box-sizing:border-box;width:320px;max-width:min(320px,80vw);padding:10px 12px;border-radius:10px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.24));background:var(--dsw-alias-bg-overlay,var(--dsw-alias-bg-layer-1,#fff));color:var(--dsw-alias-label-primary,inherit);font-size:12px;line-height:18px;font-weight:400;text-align:left;box-shadow:0 6px 18px rgba(0,0,0,.16);}
-.ske-tip:hover .ske-tip-body,.ske-tip:focus-visible .ske-tip-body{display:block;}
+.ske-tip-mark{display:inline-flex;align-items:center;justify-content:center;flex:none;width:18px;height:18px;border-radius:50%;color:var(--dsw-alias-label-secondary,inherit);cursor:help;outline:none;}
+.ske-tip-mark:hover,.ske-tip-mark:focus-visible{color:var(--dsw-alias-label-primary,inherit);}
+.ske-tip-mark:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-brand-primary,#4a7dff);}
 .ske-page.ske-panel{box-sizing:border-box;height:100%;padding:24px;overflow-y:auto;overscroll-behavior:contain;}
 .ske-pin{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));border-radius:10px;}
 .ske-pin-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
@@ -364,7 +365,55 @@ window.__ModuleLoader__.load({
       return h("button", { type: "button", className: `ske-btn${tone}`, ...rest }, props.children);
     }
 
-    // ---- text helpers --------------------------------------------------------
+    /**
+     * A short status badge: the host `Tag` when available, a local one otherwise.
+     * @param {{ tone?: string, children?: unknown }} props - tone and label.
+     * @returns {object} React element.
+     */
+    function Badge(props) {
+      const tone = props.tone === undefined ? "neutral" : props.tone;
+      if (HostTag) return h(HostTag, { tone }, props.children);
+      const toneClass =
+        tone === "success"
+          ? " ske-tag-ok"
+          : tone === "warning"
+            ? " ske-tag-warn"
+            : tone === "danger"
+              ? " ske-tag-error"
+              : "";
+      return h("span", { className: `ske-tag${toneClass}` }, props.children);
+    }
+
+    /**
+     * One filesystem path: the host `PathLabel` (which brings its own styling and
+     * middle-ellipsis behaviour) when available, plain text otherwise.
+     * @param {{ value: string, className?: string, title?: string }} props - path props.
+     * @returns {object} React element.
+     */
+    function PathText(props) {
+      const value = props.value === undefined ? "" : props.value;
+      if (HostPathLabel) {
+        return h(HostPathLabel, props.className === undefined ? { path: value } : { path: value, className: props.className });
+      }
+      return h("span", { className: props.className, title: props.title === undefined ? value : props.title }, value);
+    }
+
+    /**
+     * A hover hint: the host `Tooltip` when available, a `title` attribute otherwise.
+     * @param {{ label: string, children?: unknown }} props - hint text and trigger.
+     * @returns {object} React element.
+     */
+    function Hint(props) {
+      if (HostTooltip) {
+        return h(HostTooltip, { label: props.label, side: "bottom", maxWidth: 320, delayMs: 200 }, props.children);
+      }
+      return h(
+        "span",
+        { className: "ske-tip-mark", title: props.label, tabIndex: 0, role: "note", "aria-label": props.label },
+        props.children,
+      );
+    }
+
     /**
      * The small info mark beside the page title; its text lives in a tooltip.
      * @param {{ size?: number }} props - square edge in pixels.
@@ -405,15 +454,24 @@ window.__ModuleLoader__.load({
 
     // ---- stores --------------------------------------------------------------
     /**
-     * Minimal subscribable value; one plugin toggle needs nothing more.
+     * Snapshot store: the host's own implementation when its module resolves, so
+     * subscriptions behave exactly like every shipped panel, with a local
+     * equivalent only as a fallback.
      * @param {unknown} initial - first value.
-     * @returns {{ get: () => any, set: (next: any) => void, subscribe: (listener: () => void) => () => void }}
+     * @returns {{ getSnapshot: () => any, set: (next: any) => void, subscribe: (listener: () => void) => () => void }}
      */
     function createStore(initial) {
+      if (storeModule && typeof storeModule.createSnapshotStore === "function") {
+        try {
+          return storeModule.createSnapshotStore(initial);
+        } catch {
+          /* fall through to the local equivalent */
+        }
+      }
       let value = initial;
       const listeners = new Set();
       return {
-        get: () => value,
+        getSnapshot: () => value,
         set(next) {
           if (Object.is(next, value)) return;
           value = next;
@@ -435,23 +493,22 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Read one store as render state without depending on newer React APIs.
+     * Read one store as render state through React's own subscription hook.
      * @param {object | null | undefined} store - store from `createStore`.
      * @param {unknown} fallbackValue - value used when the store is missing.
      * @returns {any}
      */
     function useStore(store, fallbackValue) {
       const usable = Boolean(store && typeof store.subscribe === "function");
-      const [value, setValue] = React.useState(() => (usable ? store.get() : fallbackValue));
-      React.useEffect(() => {
-        if (!usable) {
-          setValue(fallbackValue);
-          return undefined;
-        }
-        setValue(store.get());
-        return store.subscribe(() => setValue(store.get()));
-      }, [store, usable]);
-      return usable ? value : fallbackValue;
+      const read = React.useCallback(() => {
+        if (!usable) return fallbackValue;
+        return typeof store.getSnapshot === "function" ? store.getSnapshot() : store.get();
+      }, [store, usable, fallbackValue]);
+      const subscribe = React.useCallback(
+        (onChange) => (usable ? store.subscribe(onChange) : () => {}),
+        [store, usable],
+      );
+      return React.useSyncExternalStore(subscribe, read, read);
     }
 
     // ---- Settings nav icon ---------------------------------------------------
@@ -924,15 +981,15 @@ window.__ModuleLoader__.load({
               { className: "ske-row-title" },
               h("span", null, skill.name),
               linkState === "linked"
-                ? h("span", { className: "ske-tag ske-tag-ok" }, t("skills.linked"))
+                ? h(Badge, { tone: "success" }, t("skills.linked"))
                 : null,
-              skill.duplicate ? h("span", { className: "ske-tag ske-tag-warn" }, t("skills.duplicate")) : null,
+              skill.duplicate ? h(Badge, { tone: "warning" }, t("skills.duplicate")) : null,
               skill.warning !== undefined
-                ? h("span", { className: "ske-tag ske-tag-warn" }, skill.warning)
+                ? h(Badge, { tone: "warning" }, skill.warning)
                 : null,
             ),
             h("div", { className: "ske-row-desc" }, skill.description || t("skills.noDescription")),
-            h("div", { className: "ske-row-sub" }, skill.target || skill.dir),
+            h("div", { className: "ske-row-sub" }, h(PathText, { value: skill.target || skill.dir })),
           ),
           h("div", { className: "ske-row-actions" }, action),
         );
@@ -1014,16 +1071,9 @@ window.__ModuleLoader__.load({
             { className: "ske-surface-heading" },
             h("span", { className: "ske-surface-title" }, t("page.title")),
             h(
-              "span",
-              {
-                className: "ske-tip",
-                tabIndex: 0,
-                role: "note",
-                "aria-label": t("page.intro"),
-                title: t("page.intro"),
-              },
-              h(IconInfo, { size: 14 }),
-              h("span", { className: "ske-tip-body", role: "tooltip" }, t("page.intro")),
+              Hint,
+              { label: t("page.intro") },
+              h("span", { className: "ske-tip-mark" }, h(IconInfo, { size: 14 })),
             ),
           ),
           h("span", { className: "ske-surface-count" }, t("skills.count", { count: skills.length })),
@@ -1038,8 +1088,10 @@ window.__ModuleLoader__.load({
             h("span", { className: "ske-section-title" }, t("presets.title")),
             h(
               "span",
-              { className: "ske-section-hint", title: skillsRoot },
-              skillsRoot === "" ? "" : t("presets.hint", { root: skillsRoot }),
+              { className: "ske-section-hint" },
+              skillsRoot === ""
+                ? ""
+                : [t("presets.hintLabel"), h(PathText, { key: "root", value: skillsRoot })],
             ),
             h(
               ActionButton,
@@ -1059,7 +1111,7 @@ window.__ModuleLoader__.load({
                     h(
                       "div",
                       { className: "ske-row-main" },
-                      h("div", { className: "ske-row-title" }, preset.path),
+                      h("div", { className: "ske-row-title" }, h(PathText, { value: preset.path })),
                       h(
                         "div",
                         { className: "ske-row-sub" },
@@ -1112,7 +1164,7 @@ window.__ModuleLoader__.load({
                     h(
                       "div",
                       { className: "ske-group-head" },
-                      h("span", { className: "ske-group-path", title: group.preset.path }, group.preset.path),
+                      h(PathText, { className: "ske-group-path", value: group.preset.path }),
                       h(
                         "span",
                         { className: "ske-group-state" },
@@ -1156,6 +1208,16 @@ window.__ModuleLoader__.load({
     function SkillsToast(props) {
       const notice = useStore(props.noticeStore, null);
       if (!notice || typeof notice.text !== "string" || notice.text === "") return null;
+      const tone = notice.kind === "error" ? "danger" : "success";
+      if (HostToast) {
+        return h(HostToast, {
+          text: notice.text,
+          tone,
+          onDone: () => {
+            if (typeof props.clearNotice === "function") props.clearNotice();
+          },
+        });
+      }
       return h(
         "div",
         {
@@ -1276,6 +1338,12 @@ window.__ModuleLoader__.load({
           noticeTimer = undefined;
         }, 3200);
       };
+      /** Drop the current message (the host Toast reports when it finished). */
+      const clearNotice = () => {
+        if (noticeTimer !== undefined) clearTimeout(noticeTimer);
+        noticeTimer = undefined;
+        noticeStore.set(null);
+      };
       ctx.effect(() => () => {
         if (noticeTimer !== undefined) clearTimeout(noticeTimer);
         noticeTimer = undefined;
@@ -1395,7 +1463,7 @@ window.__ModuleLoader__.load({
             order: 500,
             label: () => t("settings.nav"),
             locale: NS,
-            inject: () => ({ noticeStore }),
+            inject: () => ({ noticeStore, clearNotice }),
           },
           SkillsToast,
         ),

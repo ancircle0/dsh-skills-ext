@@ -1,13 +1,12 @@
 {
   "name": "dsh-skills-ext",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "DSH Harness plugin: keep preset skill directories and link their skills into the user skill root (directory junction on Windows, symlink elsewhere).",
   "type": "module",
   "main": "index.js",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
-    "./typert": "./typert.host.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
@@ -16,7 +15,6 @@
   "files": [
     "index.js",
     "client.js",
-    "typert.host.js",
     "cordis.patch.yml",
     "lib/*.js",
     "locale/*.json",
@@ -49,10 +47,16 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "node --check index.js && node --check client.js && node --check typert.host.js && node --check lib/core.js && node --check lib/service.js",
+    "check": "node --check index.js && node --check client.js && node --check lib/core.js && node --check lib/service.js",
     "test": "node test/core.test.mjs",
     "verify": "npm run check && npm test",
     "pack:check": "npm pack --dry-run"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-client-store": "^0.1.7-rc.0 || ^0.2.0-rc.1 || ^0.2.1-rc.0",
+    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.7-rc.0 || ^0.2.0-rc.1 || ^0.2.1-rc.0",
+    "@deepseek-ai/dsh-typert-protocol": "^0.1.7-rc.0 || ^0.2.0-rc.1 || ^0.2.1-rc.0"
   },
   "dsh": {
     "bundle": {

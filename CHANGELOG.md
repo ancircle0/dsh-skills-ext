@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+**宿主能力用起来，不再自己造轮子。**
+
+- **Host**：回到官方写法 —— `class SkillsExtService extends TypertRemoteService`，`[Service.init]()` 里用 `@Remote` 标记方法；删除手写的 `typert.host.js` 清单与手搓的 `typertRemote` / `remote-methods` 记录；失败改用 `RemoteError`。
+- **依赖**：改用 `peerDependencies` 声明宿主包（`@deepseek-ai/cordis`、`dsh-typert-protocol`、`dsh-client-ui-primitives`、`dsh-client-store`），不再自带任何副本，也没有 `dependencies`。
+- **Client**：控件与状态全部改用宿主实现 —— `Switch`、`Button`、`Tooltip`（标题旁 ⓘ）、`Toast`（提示，取代自绘 div + 计时器）、`Tag`（状态徽章）、`PathLabel`（路径展示）、`@deepseek-ai/dsh-client-store`（快照 store）。只在网格件缺失时退回等价的最小实现。
+- **测试方式**：改为 `npm pack` 打包后安装 tgz 验证，**不再用 `link:`** —— link 会让加载器解析到源码目录，`peerDependencies` 在那里不可解析，会掩盖真实安装问题。
+
 ## 0.1.3
 
 - **所有动作按钮改用宿主自带的 `Button`**（`@deepseek-ai/dsh-client-ui-primitives`，与宿主各处 UI 同一个组件）：添加/链接用 `primary`，刷新/删除/解除链接用 `outline`（`0.5px solid border-l3`，有明确的点击边界），尺寸随宿主（`sm` / 添加按钮 `md`）——与宿主审批卡「拒绝(outline) + 允许一次(primary)」的搭配一致。

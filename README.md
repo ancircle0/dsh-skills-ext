@@ -50,17 +50,16 @@
 ## 兼容性
 
 - 需要目标 DSH 版本提供 `settings.section`、`sidebar.panellist`、`main`、`shell.overlay` 插槽与 `ctx.remote`（本插件在 `0.2.1-rc.3` 上开发验证）。
-- 插件通过 `typert` 清单发布 `skillsExt` Remote 服务；宿主未暴露某个 UI 能力时，相应功能会**自行降级**而不是报错（例如导航图标退回默认齿轮、侧边栏开关显示"当前版本不支持"）。
-- **不依赖任何宿主包**：Host 半只 import `node:*` 内置模块，服务用 `ctx.reflect.provide()` 发布、Remote 标记手写（等价于 `TypertRemoteService` + `@Remote` 生成的两条记录），因此从 npm 安装即可加载，不会出现 `Cannot find package '@deepseek-ai/...'`。
+- **宿主依赖以 `peerDependencies` 声明**，由 DSH 运行时提供，插件不自带副本：`@deepseek-ai/cordis`、`@deepseek-ai/dsh-typert-protocol`（Host 侧服务与 Remote 标记）、`@deepseek-ai/dsh-client-ui-primitives`、`@deepseek-ai/dsh-client-store`（客户端控件与状态）。
+- 客户端拿不到某个网格件时（老宿主），相应位置退回等价的最小实现，不会抛错或白屏；设置导航图标是 best-effort DOM 增强，失败保留默认齿轮。
 
 ## 结构
 
 | 文件 | 作用 |
 |---|---|
-| `index.js` | Host 入口，导出 `apply(ctx, config)` |
-| `lib/service.js` | 纯插件：发布 `skillsExt` 服务，方法返回页面快照，失败抛带 `code` 的错误 |
+| `index.js` | Host 入口，导出 `SkillsExtService` |
+| `lib/service.js` | Cordis 服务类：`TypertRemoteService` + `@Remote` 标记，方法返回页面快照、失败抛 `RemoteError` |
 | `lib/core.js` | 纯文件系统逻辑：预设读写、技能扫描、链接状态、链接创建/删除 |
-| `typert.host.js` | Typert Host 清单，声明 `skillsExt` 的 Remote 描述符 |
 | `client.js` | Web 端：设置页/侧边栏面板、吐司、导航图标注入、Remote 客户端 |
 | `locale/*.json` | 插件在插件列表中的标题与描述（中/英） |
 | `test/core.test.mjs` | 核心逻辑测试（临时目录 + 真实链接创建/删除） |
@@ -69,13 +68,22 @@
 ## 开发
 
 ```bash
-npm run check   # 语法检查
-npm test        # 核心逻辑测试
-npm run verify  # 两者都跑
+npm run check     # 语法检查
+npm test          # 核心逻辑测试
+npm run verify    # 两者都跑
 npm run pack:check
 ```
 
-调试插件本身时可参考 `test/asar-peek.mjs`：它按 asar 头部解析归档，能直接打印/检索宿主源码（`node test/asar-peek.mjs <app.asar> <文件正则> [<内容正则>]`）。
+**验证改动时请用打包安装，不要用本地目录 `link:`**：
+
+```powershell
+npm pack                        # 得到 dsh-skills-ext-x.y.z.tgz
+# plugin_manager: install_bundle target=E:\path\to\dsh-skills-ext-x.y.z.tgz
+```
+
+`link:` 会让加载器解析到源码目录，`peerDependencies` 在那里不可解析，会掩盖真实的安装问题；打包安装才会真正走 `node_modules`，与从 npm 安装一致。
+
+调试时可参考 `test/asar-peek.mjs`：它按 asar 头部解析归档，能直接打印/检索宿主源码（`node test/asar-peek.mjs <app.asar> <文件正则> [<内容正则>]`）。
 
 ## License
 
