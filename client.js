@@ -286,7 +286,7 @@ window.__ModuleLoader__.load({
 .ske-section-head{display:flex;align-items:center;gap:10px;}
 .ske-section-title{font-size:14px;font-weight:500;color:var(--dsw-alias-label-primary,inherit);}
 .ske-section-hint{flex:1;min-width:0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.ske-btn{flex:none;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));background:transparent;color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:13px;line-height:18px;padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+.ske-btn{flex:none;box-sizing:border-box;min-height:28px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));background:transparent;color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:12px;line-height:18px;padding:0 10px;border-radius:8px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;}
 .ske-btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2,rgba(128,128,128,.1));}
 .ske-btn:disabled{opacity:.55;cursor:default;}
 .ske-btn-primary{border-color:transparent;background:var(--dsw-alias-button-primary-fill,var(--dsw-alias-brand-primary,#4a7dff));color:var(--dsw-alias-label-primary-foreground,#fff);}
@@ -1043,7 +1043,7 @@ window.__ModuleLoader__.load({
             ),
             h(
               ActionButton,
-              { variant: "primary", size: "md", disabled: busy, onClick: onAdd },
+              { variant: "primary", disabled: busy, onClick: onAdd },
               pending === "add" || pending === "browse" ? t("skills.busy") : t("presets.add"),
             ),
           ),
