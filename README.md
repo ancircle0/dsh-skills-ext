@@ -1,4 +1,4 @@
-# dsh-skills-ext
+# @ancircle0/dsh-skills-ext
 
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）插件：维护一组**预设技能目录**，把其中的技能**链接**进当前 DSH 用户技能目录，或随时**解除链接**。
 
@@ -41,7 +41,7 @@
 
 1. 侧边栏打开「**插件**」页；
 2. 点「**添加插件**」→「**安装第三方插件**」；
-3. 在「包名或地址」里填 `dsh-skills-ext`（需要固定版本时填 `dsh-skills-ext@0.1.0`），点「**安装**」。
+3. 在「包名或地址」里填 `@ancircle0/dsh-skills-ext`（需要固定版本时填 `@ancircle0/dsh-skills-ext@0.2.1`），点「**安装**」。
 
 安装后插件立即生效（安装即启用）。升级时在插件页卸载，再按上面步骤安装新版本。
 
@@ -77,8 +77,8 @@ npm run pack:check
 **验证改动时请用打包安装，不要用本地目录 `link:`**：
 
 ```powershell
-npm pack                        # 得到 dsh-skills-ext-x.y.z.tgz
-# plugin_manager: install_bundle target=E:\path\to\dsh-skills-ext-x.y.z.tgz
+npm pack                        # 得到 ancircle0-dsh-skills-ext-x.y.z.tgz
+# plugin_manager: install_bundle target=E:\path\to\ancircle0-dsh-skills-ext-x.y.z.tgz
 ```
 
 `link:` 会让加载器解析到源码目录，`peerDependencies` 在那里不可解析，会掩盖真实的安装问题；打包安装才会真正走 `node_modules`，与从 npm 安装一致。

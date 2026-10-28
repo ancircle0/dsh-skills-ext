@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- 包名改为组织作用域 **`@ancircle0/dsh-skills-ext`**（`publishConfig.access: "public"`），`cordis.patch.yml` 的行名与客户端模块 id 同步更新。安装时请使用新的包名。
+
 ## 0.2.0
 
 **宿主能力用起来，不再自己造轮子。**

@@ -1,6 +1,6 @@
 {
-  "name": "dsh-skills-ext",
-  "version": "0.2.0",
+  "name": "@ancircle0/dsh-skills-ext",
+  "version": "0.2.1",
   "description": "DSH Harness plugin: keep preset skill directories and link their skills into the user skill root (directory junction on Windows, symlink elsewhere).",
   "type": "module",
   "main": "index.js",
@@ -42,6 +42,9 @@
   "homepage": "https://github.com/ancircle0/dsh-skills-ext#readme",
   "bugs": {
     "url": "https://github.com/ancircle0/dsh-skills-ext/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=20"

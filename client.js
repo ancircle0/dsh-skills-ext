@@ -27,7 +27,7 @@
  */
 
 window.__ModuleLoader__.load({
-  id: "dsh-skills-ext",
+  id: "@ancircle0/dsh-skills-ext",
   factory: (require) => {
     const module = { exports: {} };
     const exports = module.exports;
@@ -78,7 +78,7 @@ window.__ModuleLoader__.load({
     const HostToast = hostWidget("Toast");
 
     const NS = "skillsExt";
-    const PACKAGE = "dsh-skills-ext";
+    const PACKAGE = "@ancircle0/dsh-skills-ext";
     /** Sidebar panel key: also the `main` slot key and the panellist entry id. */
     const PANEL_ID = "skills-ext";
 
