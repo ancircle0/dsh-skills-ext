@@ -76,6 +76,8 @@ window.__ModuleLoader__.load({
     const HostTag = hostWidget("Tag");
     const HostPathLabel = hostWidget("PathLabel");
     const HostToast = hostWidget("Toast");
+    const HostDisclosureRow = hostWidget("DisclosureRow");
+    const HostChevronRight = hostWidget("IconChevronRightOutlineRegular");
 
     const NS = "skillsExt";
     const PACKAGE = "@ancircle0/dsh-skills-ext";
@@ -160,6 +162,24 @@ window.__ModuleLoader__.load({
           parameters: [requestCodec(`${PACKAGE}#SkillsExtDepthRequest`)],
           result: strictClientCodec(`${PACKAGE}#SkillsExtSettingsResult`),
         },
+        {
+          id: `${PACKAGE}#skillsExt/linkPreset`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "linkPreset",
+          invocation: { kind: "direct" },
+          parameters: [requestCodec(`${PACKAGE}#SkillsExtPathRequest`)],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtStateResult`),
+        },
+        {
+          id: `${PACKAGE}#skillsExt/unlinkPreset`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "unlinkPreset",
+          invocation: { kind: "direct" },
+          parameters: [requestCodec(`${PACKAGE}#SkillsExtPathRequest`)],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtStateResult`),
+        },
       ],
     };
 
@@ -175,19 +195,20 @@ window.__ModuleLoader__.load({
       "page.intro":
         "维护预设的技能目录，并把其中的技能链接到当前 DSH 用户技能目录。链接使用目录联接（junction），解除链接只删除链接，源目录不受影响。",
       "presets.title": "预设路径",
-      "presets.hintLabel": "链接目标：",
       "presets.scanDepth": "扫描层级",
       "presets.scanDepthOption": "{depth} 级",
       "presets.scanDepthHint": "扫描到预设目录以下第几层（1–10），保存后在下一次添加或刷新时生效",
+      "presets.linkAll": "链接",
+      "presets.unlinkAll": "取消链接",
       "presets.add": "添加",
       "presets.remove": "删除",
       "presets.empty": "还没有预设路径。添加一个包含技能目录（每个技能一个子目录，里面是 SKILL.md）的路径。",
-      "presets.exists": "存在 · {count} 个技能",
+      "presets.counts": "已链接 {linked} · 共 {total} 个",
       "presets.missing": "路径不存在",
-      "skills.title": "已发现的技能",
       "skills.count": "共 {count} 个",
       "skills.refresh": "刷新",
       "skills.empty": "预设路径中还没有发现技能。",
+      "skills.emptyInPreset": "该路径下没有发现技能，可在工具栏调高扫描层级。",
       "skills.link": "链接",
       "skills.unlink": "解除链接",
       "skills.linked": "已链接",
@@ -201,6 +222,8 @@ window.__ModuleLoader__.load({
       "notice.removed": "已删除预设路径",
       "notice.linked": "已链接 {name}",
       "notice.unlinked": "已解除链接 {name}",
+      "notice.linkedAll": "已链接 {done} 个技能（跳过 {skipped}，失败 {failed}）",
+      "notice.unlinkedAll": "已取消链接 {done} 个技能（跳过 {skipped}，失败 {failed}）",
       "notice.refreshed": "已刷新",
       "notice.browseUnavailable": "当前 DSH 版本不支持选择目录，请手动输入路径",
       "errors.path-empty": "请输入预设路径",
@@ -235,21 +258,22 @@ window.__ModuleLoader__.load({
       "page.intro":
         "Maintain preset skill directories and link the skills they contain into this DSH user skill root. Linking creates a directory junction; unlinking removes only the link and leaves the source untouched.",
       "presets.title": "Preset paths",
-      "presets.hintLabel": "Link target: ",
       "presets.scanDepth": "Scan depth",
       "presets.scanDepthOption": "{depth}",
       "presets.scanDepthHint":
         "How many directory levels below a preset path to scan (1–10). Applies on the next add or refresh.",
+      "presets.linkAll": "Link",
+      "presets.unlinkAll": "Unlink",
       "presets.add": "Add",
       "presets.remove": "Remove",
       "presets.empty":
         "No preset path yet. Add a directory that contains one sub-directory per skill, each with a SKILL.md.",
-      "presets.exists": "{count} skills",
+      "presets.counts": "linked {linked} · total {total}",
       "presets.missing": "Path not found",
-      "skills.title": "Discovered skills",
       "skills.count": "{count} total",
       "skills.refresh": "Refresh",
       "skills.empty": "No skills discovered under the preset paths yet.",
+      "skills.emptyInPreset": "No skills found under this path. Raise the scan depth in the toolbar.",
       "skills.link": "Link",
       "skills.unlink": "Unlink",
       "skills.linked": "Linked",
@@ -263,6 +287,8 @@ window.__ModuleLoader__.load({
       "notice.removed": "Preset path removed",
       "notice.linked": "Linked {name}",
       "notice.unlinked": "Unlinked {name}",
+      "notice.linkedAll": "Linked {done} (skipped {skipped}, failed {failed})",
+      "notice.unlinkedAll": "Unlinked {done} (skipped {skipped}, failed {failed})",
       "notice.refreshed": "Refreshed",
       "notice.browseUnavailable": "This DSH version cannot pick directories; type the path instead",
       "errors.path-empty": "Enter a preset path",
@@ -291,6 +317,7 @@ window.__ModuleLoader__.load({
 .ske-surface-heading{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
 .ske-surface-title{min-width:0;font-weight:500;font-size:16px;line-height:24px;color:var(--dsw-alias-label-primary,inherit);}
 .ske-surface-count{flex:none;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary,inherit);}
+.ske-surface-path{flex:1;min-width:0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ske-tip-mark{display:inline-flex;align-items:center;justify-content:center;flex:none;width:18px;height:18px;border-radius:50%;color:var(--dsw-alias-label-secondary,inherit);cursor:help;outline:none;}
 .ske-tip-mark:hover,.ske-tip-mark:focus-visible{color:var(--dsw-alias-label-primary,inherit);}
 .ske-tip-mark:focus-visible{box-shadow:0 0 0 2px var(--dsw-alias-brand-primary,#4a7dff);}
@@ -308,8 +335,9 @@ window.__ModuleLoader__.load({
 .ske-switch-on .ske-switch-knob{transform:translateX(16px);}
 .ske-switch:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,#4a7dff);outline-offset:2px;}
 .ske-section{display:flex;flex-direction:column;gap:8px;}
-.ske-section-head{display:flex;align-items:center;gap:10px;}
-.ske-depth{display:inline-flex;align-items:center;gap:6px;flex:none;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);}
+.ske-section-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;row-gap:8px;}
+.ske-section-title{flex:none;font-size:14px;font-weight:500;color:var(--dsw-alias-label-primary,inherit);}
+.ske-depth{display:inline-flex;align-items:center;gap:6px;flex:none;margin-right:auto;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);}
 .ske-depth-select{box-sizing:border-box;height:28px;padding:0 6px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:8px;background:transparent;color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:12px;line-height:18px;cursor:pointer;outline:none;}
 .ske-depth-select:focus-visible{border-color:var(--dsw-alias-brand-primary,#4a7dff);}
 .ske-depth-select:disabled{opacity:.55;cursor:default;}
@@ -322,16 +350,28 @@ window.__ModuleLoader__.load({
 .ske-btn-primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover,var(--dsw-alias-brand-primary,#4a7dff));}
 .ske-btn-danger:hover:not(:disabled){border-color:var(--dsw-alias-state-error-primary,#d94a4a);color:var(--dsw-alias-state-error-primary,#d94a4a);}
 .ske-list{display:flex;flex-direction:column;gap:2px;}
-.ske-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));}
+.ske-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.16));}
 .ske-row+.ske-row{margin-top:2px;}
 .ske-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
 .ske-row-title{display:flex;align-items:center;gap:6px;font-size:13px;line-height:18px;color:var(--dsw-alias-label-primary,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ske-row-desc{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ske-row-sub{font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary,inherit);opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ske-row-actions{flex:none;display:flex;align-items:center;gap:6px;}
-.ske-group-head{display:flex;align-items:center;gap:8px;margin-top:10px;padding:0 10px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);}
-.ske-group-path{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
-.ske-group-state{flex:none;}
+.ske-items{display:flex;flex-direction:column;gap:0;}
+.ske-item{border:none;border-radius:0;}
+.ske-item + .ske-item{border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));}
+.ske-item-row{gap:8px;padding:14px 0;border-radius:8px;}
+.ske-item-shimmer{flex:1 1 auto;min-width:0;display:flex;align-items:center;}
+.ske-item-shimmer-content{flex:1 1 auto;min-width:0;display:flex;align-items:center;}
+.ske-item-title{flex:1 1 auto;min-width:0;display:flex;align-items:center;}
+.ske-item-summary{display:flex;align-items:center;gap:10px;width:100%;min-width:0;}
+.ske-item-summary-wrap{display:flex;align-items:center;gap:10px;padding:14px 0;}
+.ske-item-main{display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden;}
+.ske-item-path{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
+.ske-item-actions{display:flex;align-items:center;gap:6px;flex:none;margin-left:auto;}
+.ske-item-body{padding:0 0 6px 0;}
+.ske-chevron-fallback{display:inline-flex;align-items:center;justify-content:center;width:14px;font-size:14px;line-height:1;color:var(--dsw-alias-label-secondary,inherit);}
+.ske-empty-tight{padding:6px 12px;}
 .ske-tag{flex:none;font-size:11px;line-height:16px;padding:0 6px;border-radius:6px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));color:var(--dsw-alias-label-secondary,inherit);}
 .ske-tag-ok{color:var(--dsw-alias-state-success-primary,#2f9e5b);border-color:var(--dsw-alias-state-success-primary,#2f9e5b);}
 .ske-tag-warn{color:var(--dsw-alias-state-warn-primary,#b9791a);border-color:var(--dsw-alias-state-warn-primary,#b9791a);}
@@ -778,6 +818,19 @@ window.__ModuleLoader__.load({
       const stateStore =
         page.pageStateStore && typeof page.pageStateStore.set === "function" ? page.pageStateStore : null;
       const sharedState = useStore(stateStore, null);
+    // Collapsed/expanded preset groups, shared by both entry points and kept for
+    // this session only (every group starts collapsed).
+    const expandedPaths = useStore(page.expandedStore, null);
+    const isExpanded = (path) => expandedPaths instanceof Set && expandedPaths.has(path);
+    const toggleExpanded = (path) => {
+      const store = page.expandedStore;
+      if (!store || typeof store.set !== "function") return;
+      const current = typeof store.getSnapshot === "function" ? store.getSnapshot() : null;
+      const next = new Set(current instanceof Set ? current : []);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      store.set(next);
+    };
       const [ownState, setOwnState] = React.useState(null);
       const state = stateStore === null ? ownState : sharedState;
       const setState = React.useCallback(
@@ -870,7 +923,8 @@ window.__ModuleLoader__.load({
             const snapshot = readAnswer(await call());
             if (!alive.current) return;
             setState(snapshot);
-            setNotice(okText ? { kind: "ok", text: okText } : null);
+            const text = typeof okText === "function" ? okText(snapshot) : okText;
+            setNotice(text ? { kind: "ok", text } : null);
           } catch (error) {
             if (!alive.current) return;
             setNotice({ kind: "error", text: describeFailure(error) });
@@ -963,6 +1017,31 @@ window.__ModuleLoader__.load({
         );
       };
 
+      const inFlightBulk = (preset, sub, unlink) => {
+        void run(
+          sub,
+          () => (unlink ? remote.unlinkPreset({ path: preset.path }) : remote.linkPreset({ path: preset.path })),
+          (snapshot) => {
+            const summary =
+              snapshot && typeof snapshot.summary === "object" && snapshot.summary !== null
+                ? snapshot.summary
+                : {};
+            const counts = {
+              done: typeof summary[unlink ? "unlinked" : "linked"] === "number" ? summary[unlink ? "unlinked" : "linked"] : 0,
+              skipped: typeof summary.skipped === "number" ? summary.skipped : 0,
+              failed: typeof summary.failed === "number" ? summary.failed : 0,
+            };
+            return t(unlink ? "notice.unlinkedAll" : "notice.linkedAll", counts);
+          },
+        );
+      };
+
+      /** Link every skill under one preset path in a single Host call. */
+      const onLinkPreset = (preset) => inFlightBulk(preset, "linkPreset", false);
+
+      /** Remove the links of every skill under one preset path. */
+      const onUnlinkPreset = (preset) => inFlightBulk(preset, "unlinkPreset", true);
+
       const busy = pending !== null;
       const presets = (state && state.presets) || [];
       const skills = (state && state.skills) || [];
@@ -1054,11 +1133,6 @@ window.__ModuleLoader__.load({
         );
       };
 
-      const groups = presets.map((preset) => ({
-        preset,
-        skills: skills.filter((skill) => skill.presetPath === preset.path),
-      }));
-
       // The switch is part of this one page, so it appears wherever the page
       // does: the Settings section and the sidebar panel render identically.
       const toggle = (next) => {
@@ -1119,6 +1193,108 @@ window.__ModuleLoader__.load({
         switchControl,
       );
 
+      // One preset group: the summary is always visible, the skill list only when
+      // the group is open. Both surfaces share the open set, and every group starts
+      // collapsed.
+      const presetItem = (preset) => {
+        const groupSkills = skills.filter((skill) => skill.presetPath === preset.path);
+        const linkedCount = groupSkills.filter((skill) => skill.link === "linked").length;
+        // "all linked" drives the bulk button's label: link the rest, or undo them all.
+        const allLinked = groupSkills.length > 0 && linkedCount === groupSkills.length;
+        const key = `preset:${preset.path}`;
+        const summary = h(
+          "span",
+          { className: "ske-item-summary" },
+          h(
+            "span",
+            { className: "ske-item-main" },
+            h(PathText, { className: "ske-item-path", value: preset.path }),
+            h(
+              Badge,
+              { tone: "neutral" },
+              t("presets.counts", { linked: linkedCount, total: groupSkills.length }),
+            ),
+            preset.exists ? null : h(Badge, { tone: "warning" }, t("presets.missing")),
+          ),
+          h(
+            "span",
+            { className: "ske-item-actions" },
+            h(
+              ActionButton,
+              {
+                variant: "outline",
+                disabled: busy || groupSkills.length === 0,
+                onClick: (event) => {
+                  if (event && typeof event.stopPropagation === "function") event.stopPropagation();
+                  if (allLinked) onUnlinkPreset(preset);
+                  else onLinkPreset(preset);
+                },
+              },
+              pending === "linkPreset" || pending === "unlinkPreset"
+                ? t("skills.busy")
+                : allLinked
+                  ? t("presets.unlinkAll")
+                  : t("presets.linkAll"),
+            ),
+            h(
+              ActionButton,
+              {
+                variant: "outline",
+                danger: true,
+                disabled: busy,
+                onClick: (event) => {
+                  if (event && typeof event.stopPropagation === "function") event.stopPropagation();
+                  onRemovePreset(preset.path);
+                },
+              },
+              t("presets.remove"),
+            ),
+          ),
+        );
+        const body = h(
+          "div",
+          { className: "ske-item-body" },
+          groupSkills.length === 0
+            ? h("div", { className: "ske-empty ske-empty-tight" }, t("skills.emptyInPreset"))
+            : h("div", { className: "ske-list" }, groupSkills.map((skill) => skillRow(skill))),
+        );
+        if (!HostDisclosureRow) {
+          // An older host without the disclosure primitive keeps every group open.
+          return h(
+            "div",
+            { className: "ske-item ske-item-static", key },
+            h("div", { className: "ske-item-summary-wrap" }, summary),
+            body,
+          );
+        }
+        return h(
+          HostDisclosureRow,
+          {
+            key,
+            className: "ske-item",
+            rowClassName: "ske-item-row",
+            titleClassName: "ske-item-title",
+            // The host wraps `title` in two TextShimmer spans; both must stretch so
+            // the summary can push its actions to the right edge.
+            contentClassName: "ske-item-shimmer",
+            contentLayoutClassName: "ske-item-shimmer-content",
+            title: summary,
+            icon: HostChevronRight
+              ? h(HostChevronRight, { size: 14 })
+              : h("span", { className: "ske-chevron-fallback" }, "›"),
+            // The default preview chevron only appears while hovering; switching it
+            // off keeps a static arrow visible and lets the open state swap in the
+            // host's down chevron.
+            previewChevron: false,
+            open: isExpanded(preset.path),
+            expandable: true,
+            expandOnRowClick: true,
+            onToggle: () => toggleExpanded(preset.path),
+          },
+          body,
+        );
+      };
+
       return h(
         "div",
         { className: surface === "panel" ? "ske-page ske-panel" : "ske-page" },
@@ -1134,6 +1310,9 @@ window.__ModuleLoader__.load({
               { label: t("page.intro") },
               h("span", { className: "ske-tip-mark" }, h(IconInfo, { size: 14 })),
             ),
+            // The link target reads as part of the page title, so the toolbar below
+            // can stay one compact row of controls.
+            skillsRoot === "" ? null : h(PathText, { className: "ske-surface-path", value: skillsRoot }),
           ),
           h("span", { className: "ske-surface-count" }, t("skills.count", { count: skills.length })),
         ),
@@ -1141,17 +1320,11 @@ window.__ModuleLoader__.load({
         h(
           "section",
           { className: "ske-section" },
+          // Toolbar: what the next add uses, plus a manual rescan.
           h(
             "div",
             { className: "ske-section-head" },
             h("span", { className: "ske-section-title" }, t("presets.title")),
-            h(
-              "span",
-              { className: "ske-section-hint" },
-              skillsRoot === ""
-                ? ""
-                : [t("presets.hintLabel"), h(PathText, { key: "root", value: skillsRoot })],
-            ),
             h(
               "label",
               { className: "ske-depth", title: t("presets.scanDepthHint") },
@@ -1180,90 +1353,18 @@ window.__ModuleLoader__.load({
               { variant: "primary", disabled: busy, onClick: onAdd },
               pending === "add" || pending === "browse" ? t("skills.busy") : t("presets.add"),
             ),
-          ),
-          presets.length === 0
-            ? h("div", { className: "ske-empty" }, t("presets.empty"))
-            : h(
-                "div",
-                { className: "ske-list" },
-                presets.map((preset) =>
-                  h(
-                    "div",
-                    { className: "ske-row", key: `preset:${preset.path}` },
-                    h(
-                      "div",
-                      { className: "ske-row-main" },
-                      h("div", { className: "ske-row-title" }, h(PathText, { value: preset.path })),
-                      h(
-                        "div",
-                        { className: "ske-row-sub" },
-                        preset.exists
-                          ? t("presets.exists", { count: preset.skillCount || 0 })
-                          : preset.warning || t("presets.missing"),
-                      ),
-                    ),
-                    h(
-                      "div",
-                      { className: "ske-row-actions" },
-                      h(
-                        ActionButton,
-                        {
-                          variant: "outline",
-                          danger: true,
-                          disabled: busy,
-                          onClick: () => onRemovePreset(preset.path),
-                        },
-                        t("presets.remove"),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-        ),
-        h(
-          "section",
-          { className: "ske-section" },
-          h(
-            "div",
-            { className: "ske-section-head" },
-            h("span", { className: "ske-section-title" }, t("skills.title")),
-            h("span", { className: "ske-section-hint" }, t("skills.count", { count: skills.length })),
             h(
               ActionButton,
               { variant: "outline", disabled: busy, onClick: () => refresh(true) },
               pending === "refresh" ? t("skills.busy") : t("skills.refresh"),
             ),
           ),
-          skills.length === 0
-            ? h("div", { className: "ske-empty" }, t("skills.empty"))
+          presets.length === 0
+            ? h("div", { className: "ske-empty" }, t("presets.empty"))
             : h(
                 "div",
-                null,
-                groups.map((group) =>
-                  h(
-                    "div",
-                    { key: `group:${group.preset.path}` },
-                    h(
-                      "div",
-                      { className: "ske-group-head" },
-                      h(PathText, { className: "ske-group-path", value: group.preset.path }),
-                      h(
-                        "span",
-                        { className: "ske-group-state" },
-                        group.preset.exists
-                          ? t("presets.exists", { count: group.skills.length })
-                          : t("presets.missing"),
-                      ),
-                    ),
-                    h(
-                      "div",
-                      { className: "ske-list" },
-                      group.skills.length === 0
-                        ? h("div", { className: "ske-empty" }, t("skills.empty"))
-                        : group.skills.map((skill) => skillRow(skill)),
-                    ),
-                  ),
-                ),
+                { className: "ske-items" },
+                presets.map((preset) => presetItem(preset)),
               ),
         ),
       );
@@ -1404,6 +1505,8 @@ window.__ModuleLoader__.load({
       // The page snapshot both surfaces read and write, so one mount never shows
       // what another mount left behind.
       const pageStateStore = createStore(null);
+      // Which preset groups are open; session-scoped and shared by both surfaces.
+      const expandedStore = createStore(new Set());
       // Frame-level feedback state; the toast entry below renders it.
       const noticeStore = createStore(null);
       let noticeTimer;
@@ -1442,6 +1545,7 @@ window.__ModuleLoader__.load({
           sidebarEnabledStore,
           sidebarSupportedStore,
           pageStateStore,
+          expandedStore,
           showNotice,
           setSidebarEnabled,
         },

@@ -8,10 +8,12 @@ import { join } from "node:path";
 import {
   addPreset,
   ensureConfig,
+  linkPresetSkills,
   linkSkill,
   readState,
   removePreset,
   setScanDepth,
+  unlinkPresetSkills,
   unlinkSkill,
 } from "../lib/core.js";
 
@@ -144,6 +146,28 @@ check("unlink ok", unlinked.ok === true, unlinked);
 check("skill now missing", unlinked.value.skills.find((s) => s.name === "alpha").link === "missing", unlinked.value.skills);
 check("source untouched", readdirSync(alpha).join() === before.join());
 check("unlink idempotent", unlinkSkill({ env, name: "alpha" }).ok === true);
+
+// --- bulk link / unlink -----------------------------------------------------
+const bulkLink = linkPresetSkills({ env, path: presetsRoot });
+check("bulk link ok", bulkLink.ok === true, bulkLink);
+check("bulk link linked the free skill", bulkLink.value.summary.linked === 1, bulkLink.value.summary);
+check("bulk link reports the occupied name", bulkLink.value.summary.failed === 1, bulkLink.value.summary);
+check(
+  "bulk link left the real directory alone",
+  readdirSync(join(home, "skills")).includes("beta-skill"),
+);
+const bulkUnlink = unlinkPresetSkills({ env, path: presetsRoot });
+check("bulk unlink ok", bulkUnlink.ok === true, bulkUnlink);
+check("bulk unlink removed the link", bulkUnlink.value.summary.unlinked === 1, bulkUnlink.value.summary);
+check("bulk unlink reports the real directory", bulkUnlink.value.summary.failed === 1, bulkUnlink.value.summary);
+check(
+  "bulk unlink left nothing linked",
+  readState({ env }).value.skills.every((skill) => skill.link !== "linked"),
+);
+check(
+  "bulk link on a missing preset fails",
+  linkPresetSkills({ env, path: join(root, "no-such-preset") }).ok === false,
+);
 
 // --- remove preset ---------------------------------------------------------
 const removed = removePreset({ env, path: presetsRoot });
