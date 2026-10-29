@@ -217,7 +217,6 @@ window.__ModuleLoader__.load({
       "skills.duplicate": "重名",
       "skills.level": "第 {level} 层",
       "skills.noDescription": "（无描述）",
-      "skills.busy": "处理中…",
       "notice.added": "已添加预设路径",
       "notice.removed": "已删除预设路径",
       "notice.linked": "已链接 {name}",
@@ -282,7 +281,6 @@ window.__ModuleLoader__.load({
       "skills.duplicate": "duplicate",
       "skills.level": "level {level}",
       "skills.noDescription": "(no description)",
-      "skills.busy": "Working…",
       "notice.added": "Preset path added",
       "notice.removed": "Preset path removed",
       "notice.linked": "Linked {name}",
@@ -998,7 +996,7 @@ window.__ModuleLoader__.load({
       };
 
       const onRemovePreset = (path) => {
-        void run("remove", () => remote.removePreset({ path }), t("notice.removed"));
+        void run(`remove:${path}`, () => remote.removePreset({ path }), t("notice.removed"));
       };
 
       const onLink = (skill) => {
@@ -1019,7 +1017,7 @@ window.__ModuleLoader__.load({
 
       const inFlightBulk = (preset, sub, unlink) => {
         void run(
-          sub,
+          `${sub}:${preset.path}`,
           () => (unlink ? remote.unlinkPreset({ path: preset.path }) : remote.linkPreset({ path: preset.path })),
           (snapshot) => {
             const summary =
@@ -1042,7 +1040,6 @@ window.__ModuleLoader__.load({
       /** Remove the links of every skill under one preset path. */
       const onUnlinkPreset = (preset) => inFlightBulk(preset, "unlinkPreset", true);
 
-      const busy = pending !== null;
       const presets = (state && state.presets) || [];
       const skills = (state && state.skills) || [];
       const skillsRoot = state && state.skillsRoot ? state.skillsRoot : "";
@@ -1085,18 +1082,23 @@ window.__ModuleLoader__.load({
         if (linkState === "linked") {
           action = h(
             ActionButton,
-            { variant: "outline", danger: true, disabled: busy, onClick: () => onUnlink(skill) },
-            pending === unlinkKey ? t("skills.busy") : t("skills.unlink"),
+            {
+              variant: "outline",
+              danger: true,
+              disabled: pending === unlinkKey,
+              onClick: () => onUnlink(skill),
+            },
+            t("skills.unlink"),
           );
         } else if (linkState === "missing") {
           action = h(
             ActionButton,
             {
               variant: "primary",
-              disabled: busy || skill.warning !== undefined,
+              disabled: pending === linkKey || skill.warning !== undefined,
               onClick: () => onLink(skill),
             },
-            pending === linkKey ? t("skills.busy") : t("skills.link"),
+            t("skills.link"),
           );
         } else {
           const label = linkState === "conflict" ? t("skills.conflict") : t("skills.occupied");
@@ -1201,6 +1203,9 @@ window.__ModuleLoader__.load({
         const linkedCount = groupSkills.filter((skill) => skill.link === "linked").length;
         // "all linked" drives the bulk button's label: link the rest, or undo them all.
         const allLinked = groupSkills.length > 0 && linkedCount === groupSkills.length;
+        // Per-group busy keys: one group's request must never dim another group's row.
+        const bulkKey = allLinked ? `unlinkPreset:${preset.path}` : `linkPreset:${preset.path}`;
+        const removeKey = `remove:${preset.path}`;
         const key = `preset:${preset.path}`;
         const summary = h(
           "span",
@@ -1223,25 +1228,21 @@ window.__ModuleLoader__.load({
               ActionButton,
               {
                 variant: "outline",
-                disabled: busy || groupSkills.length === 0,
+                disabled: pending === bulkKey || groupSkills.length === 0,
                 onClick: (event) => {
                   if (event && typeof event.stopPropagation === "function") event.stopPropagation();
                   if (allLinked) onUnlinkPreset(preset);
                   else onLinkPreset(preset);
                 },
               },
-              pending === "linkPreset" || pending === "unlinkPreset"
-                ? t("skills.busy")
-                : allLinked
-                  ? t("presets.unlinkAll")
-                  : t("presets.linkAll"),
+              allLinked ? t("presets.unlinkAll") : t("presets.linkAll"),
             ),
             h(
               ActionButton,
               {
                 variant: "outline",
                 danger: true,
-                disabled: busy,
+                disabled: pending === removeKey,
                 onClick: (event) => {
                   if (event && typeof event.stopPropagation === "function") event.stopPropagation();
                   onRemovePreset(preset.path);
@@ -1334,7 +1335,7 @@ window.__ModuleLoader__.load({
                 {
                   className: "ske-depth-select",
                   value: String(scanDepth),
-                  disabled: busy,
+                  disabled: pending === "scanDepth",
                   "aria-label": t("presets.scanDepth"),
                   title: t("presets.scanDepthHint"),
                   onChange: (event) => onScanDepthChange(event.target.value),
@@ -1350,13 +1351,17 @@ window.__ModuleLoader__.load({
             ),
             h(
               ActionButton,
-              { variant: "primary", disabled: busy, onClick: onAdd },
-              pending === "add" || pending === "browse" ? t("skills.busy") : t("presets.add"),
+              {
+                variant: "primary",
+                disabled: pending === "add" || pending === "browse",
+                onClick: onAdd,
+              },
+              t("presets.add"),
             ),
             h(
               ActionButton,
-              { variant: "outline", disabled: busy, onClick: () => refresh(true) },
-              pending === "refresh" ? t("skills.busy") : t("skills.refresh"),
+              { variant: "outline", disabled: pending === "refresh", onClick: () => refresh(true) },
+              t("skills.refresh"),
             ),
           ),
           presets.length === 0
