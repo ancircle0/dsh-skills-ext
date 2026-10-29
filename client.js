@@ -151,6 +151,15 @@ window.__ModuleLoader__.load({
           parameters: [requestCodec(`${PACKAGE}#SkillsExtNameRequest`)],
           result: strictClientCodec(`${PACKAGE}#SkillsExtStateResult`),
         },
+        {
+          id: `${PACKAGE}#skillsExt/setScanDepth`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "setScanDepth",
+          invocation: { kind: "direct" },
+          parameters: [requestCodec(`${PACKAGE}#SkillsExtDepthRequest`)],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtSettingsResult`),
+        },
       ],
     };
 
@@ -970,22 +979,23 @@ window.__ModuleLoader__.load({
         if (!Number.isFinite(depth) || depth === scanDepth) return;
         setDepthDraft(depth);
         setPending("scanDepth");
-        Promise.resolve(remote.setScanDepth({ depth }))
-          .then((answer) => {
-            if (!alive.current) return;
-            const stored = readAnswer(answer);
+        // One body, one place to release `pending`: a synchronous throw from the
+        // Remote call must not leave the whole page disabled.
+        void (async () => {
+          try {
+            const stored = readAnswer(await remote.setScanDepth({ depth }));
             const saved = typeof stored.scanDepth === "number" ? stored.scanDepth : depth;
+            if (!alive.current) return;
             setDepthDraft(saved);
             setNotice({ kind: "ok", text: t("notice.depthSaved", { depth: saved }) });
-          })
-          .catch((error) => {
+          } catch (error) {
             if (!alive.current) return;
             setDepthDraft(null);
             setNotice({ kind: "error", text: describeFailure(error) });
-          })
-          .finally(() => {
+          } finally {
             if (alive.current) setPending(null);
-          });
+          }
+        })();
       };
 
       const skillRow = (skill) => {
