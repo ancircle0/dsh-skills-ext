@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- **多层级扫描**：新增全局「扫描层级」选择框（1–10 级，默认 1 级），解决技能不在预设目录第一层子目录时扫不出来的问题。修改即持久化到 `$DSH_HOME/skills-ext/settings.json`，在下一次添加或刷新时生效；深层找到的技能在列表里带「第 N 层」标记。含 `SKILL.md` 的目录视为技能包，不再向下递归。
+- Host 新增 `setScanDepth` Remote 方法；`state` 快照增加 `scanDepth`、`settingsFile`，技能条目增加 `level` 与 `relativePath`。
+- 核心测试补充层级用例（默认层级、深层发现、层级持久化、上下限截断）。
+
 ## 0.2.1
 
 - 包名改为组织作用域 **`@ancircle0/dsh-skills-ext`**（`publishConfig.access: "public"`），`cordis.patch.yml` 的行名与客户端模块 id 同步更新。安装时请使用新的包名。

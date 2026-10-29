@@ -11,6 +11,7 @@ import {
   linkSkill,
   readState,
   removePreset,
+  setScanDepth,
   unlinkSkill,
 } from "../lib/core.js";
 
@@ -66,6 +67,38 @@ check("all missing", added.value.skills.every((s) => s.link === "missing"), adde
 check(
   "preset file written",
   JSON.parse(readFileSync(join(home, "skills-ext", "presets.json"), "utf8")).presets.includes(presetsRoot),
+);
+
+// --- scan depth ------------------------------------------------------------
+writeSkill(join(presetsRoot, "team", "sub"), "deep-skill", "deep-skill", "Deep skill");
+check(
+  "default depth 1 hides nested skills",
+  added.value.scanDepth === 1 && !added.value.skills.some((s) => s.name === "deep-skill"),
+  added.value.scanDepth,
+);
+const savedDepth = setScanDepth({ env, depth: 3 });
+check("depth saved", savedDepth.ok === true && savedDepth.value.scanDepth === 3, savedDepth);
+check(
+  "settings file written",
+  JSON.parse(readFileSync(join(home, "skills-ext", "settings.json"), "utf8")).scanDepth === 3,
+);
+const deeper = readState({ env });
+check(
+  "depth 3 finds the nested skill",
+  deeper.value.skills.some((s) => s.name === "deep-skill"),
+  deeper.value.skills.map((s) => `${s.name}@L${s.level}`),
+);
+check(
+  "nested skill reports its level",
+  deeper.value.skills.find((s) => s.name === "deep-skill").level === 3,
+  deeper.value.skills.find((s) => s.name === "deep-skill"),
+);
+check("depth clamps high", setScanDepth({ env, depth: 50 }).value.scanDepth === 10);
+check("depth clamps low", setScanDepth({ env, depth: 0 }).value.scanDepth === 1);
+setScanDepth({ env, depth: 1 });
+check(
+  "depth 1 hides the nested skill again",
+  !readState({ env }).value.skills.some((s) => s.name === "deep-skill"),
 );
 
 const duplicate = addPreset({ env, path: presetsRoot });

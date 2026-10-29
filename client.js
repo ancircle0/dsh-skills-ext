@@ -81,10 +81,12 @@ window.__ModuleLoader__.load({
     const PACKAGE = "@ancircle0/dsh-skills-ext";
     /** Sidebar panel key: also the `main` slot key and the panellist entry id. */
     const PANEL_ID = "skills-ext";
+    /** Depth choices offered by the scan-depth selector (mirrors core's 1–10). */
+    const DEPTH_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
     // ---- Client Remote contribution -----------------------------------------
-    // Codecs stay pass-through on this side: the Host manifest
-    // (`typert.host.js`) owns every real validation rule.
+    // Codecs stay pass-through on this side: the Host service owns every rule and
+    // answers with a coded failure.
     let passthroughValue;
     const passthroughSchema = () => (passthroughValue ??= { parse: (value) => value });
     const strictClientCodec = (typeSymbol) => ({
@@ -165,6 +167,9 @@ window.__ModuleLoader__.load({
         "维护预设的技能目录，并把其中的技能链接到当前 DSH 用户技能目录。链接使用目录联接（junction），解除链接只删除链接，源目录不受影响。",
       "presets.title": "预设路径",
       "presets.hintLabel": "链接目标：",
+      "presets.scanDepth": "扫描层级",
+      "presets.scanDepthOption": "{depth} 级",
+      "presets.scanDepthHint": "扫描到预设目录以下第几层（1–10），保存后在下一次添加或刷新时生效",
       "presets.add": "添加",
       "presets.remove": "删除",
       "presets.empty": "还没有预设路径。添加一个包含技能目录（每个技能一个子目录，里面是 SKILL.md）的路径。",
@@ -180,6 +185,7 @@ window.__ModuleLoader__.load({
       "skills.conflict": "已被其他链接占用",
       "skills.occupied": "同名目录已存在",
       "skills.duplicate": "重名",
+      "skills.level": "第 {level} 层",
       "skills.noDescription": "（无描述）",
       "skills.busy": "处理中…",
       "notice.added": "已添加预设路径",
@@ -201,7 +207,9 @@ window.__ModuleLoader__.load({
       "errors.target-not-link": "该条目不是链接，未删除",
       "errors.link-failed": "创建链接失败",
       "errors.unlink-failed": "删除链接失败",
+      "notice.depthSaved": "扫描层级已保存为 {depth} 级（下次添加或刷新生效）",
       "errors.state-failed": "读取状态失败",
+      "errors.settings-failed": "保存设置失败",
       "errors.unknown": "操作失败",
     };
 
@@ -219,6 +227,10 @@ window.__ModuleLoader__.load({
         "Maintain preset skill directories and link the skills they contain into this DSH user skill root. Linking creates a directory junction; unlinking removes only the link and leaves the source untouched.",
       "presets.title": "Preset paths",
       "presets.hintLabel": "Link target: ",
+      "presets.scanDepth": "Scan depth",
+      "presets.scanDepthOption": "{depth}",
+      "presets.scanDepthHint":
+        "How many directory levels below a preset path to scan (1–10). Applies on the next add or refresh.",
       "presets.add": "Add",
       "presets.remove": "Remove",
       "presets.empty":
@@ -235,6 +247,7 @@ window.__ModuleLoader__.load({
       "skills.conflict": "Linked elsewhere",
       "skills.occupied": "Name taken by a real directory",
       "skills.duplicate": "duplicate",
+      "skills.level": "level {level}",
       "skills.noDescription": "(no description)",
       "skills.busy": "Working…",
       "notice.added": "Preset path added",
@@ -256,7 +269,9 @@ window.__ModuleLoader__.load({
       "errors.target-not-link": "That entry is not a link, so nothing was removed",
       "errors.link-failed": "Could not create the link",
       "errors.unlink-failed": "Could not remove the link",
+      "notice.depthSaved": "Scan depth saved as {depth} (applies on the next add or refresh)",
       "errors.state-failed": "Could not read the state",
+      "errors.settings-failed": "Could not save the setting",
       "errors.unknown": "The operation failed",
     };
 
@@ -285,6 +300,10 @@ window.__ModuleLoader__.load({
 .ske-switch:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,#4a7dff);outline-offset:2px;}
 .ske-section{display:flex;flex-direction:column;gap:8px;}
 .ske-section-head{display:flex;align-items:center;gap:10px;}
+.ske-depth{display:inline-flex;align-items:center;gap:6px;flex:none;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);}
+.ske-depth-select{box-sizing:border-box;height:28px;padding:0 6px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:8px;background:transparent;color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:12px;line-height:18px;cursor:pointer;outline:none;}
+.ske-depth-select:focus-visible{border-color:var(--dsw-alias-brand-primary,#4a7dff);}
+.ske-depth-select:disabled{opacity:.55;cursor:default;}
 .ske-section-title{font-size:14px;font-weight:500;color:var(--dsw-alias-label-primary,inherit);}
 .ske-section-hint{flex:1;min-width:0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ske-btn{flex:none;box-sizing:border-box;min-height:28px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));background:transparent;color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:12px;line-height:18px;padding:0 10px;border-radius:8px;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;}
@@ -940,6 +959,35 @@ window.__ModuleLoader__.load({
       const skills = (state && state.skills) || [];
       const skillsRoot = state && state.skillsRoot ? state.skillsRoot : "";
 
+      // The scan depth is one global, persisted setting. The selector shows the
+      // stored value; a change is committed straight away and only re-scans on the
+      // next add or refresh.
+      const storedDepth = state && typeof state.scanDepth === "number" ? state.scanDepth : 1;
+      const [depthDraft, setDepthDraft] = React.useState(null);
+      const scanDepth = depthDraft === null ? storedDepth : depthDraft;
+      const onScanDepthChange = (value) => {
+        const depth = Number(value);
+        if (!Number.isFinite(depth) || depth === scanDepth) return;
+        setDepthDraft(depth);
+        setPending("scanDepth");
+        Promise.resolve(remote.setScanDepth({ depth }))
+          .then((answer) => {
+            if (!alive.current) return;
+            const stored = readAnswer(answer);
+            const saved = typeof stored.scanDepth === "number" ? stored.scanDepth : depth;
+            setDepthDraft(saved);
+            setNotice({ kind: "ok", text: t("notice.depthSaved", { depth: saved }) });
+          })
+          .catch((error) => {
+            if (!alive.current) return;
+            setDepthDraft(null);
+            setNotice({ kind: "error", text: describeFailure(error) });
+          })
+          .finally(() => {
+            if (alive.current) setPending(null);
+          });
+      };
+
       const skillRow = (skill) => {
         const linkState = skill.link;
         const linkKey = `link:${skill.name}`;
@@ -984,6 +1032,7 @@ window.__ModuleLoader__.load({
                 ? h(Badge, { tone: "success" }, t("skills.linked"))
                 : null,
               skill.duplicate ? h(Badge, { tone: "warning" }, t("skills.duplicate")) : null,
+              skill.level > 1 ? h(Badge, { tone: "info" }, t("skills.level", { level: skill.level })) : null,
               skill.warning !== undefined
                 ? h(Badge, { tone: "warning" }, skill.warning)
                 : null,
@@ -1092,6 +1141,29 @@ window.__ModuleLoader__.load({
               skillsRoot === ""
                 ? ""
                 : [t("presets.hintLabel"), h(PathText, { key: "root", value: skillsRoot })],
+            ),
+            h(
+              "label",
+              { className: "ske-depth", title: t("presets.scanDepthHint") },
+              h("span", { className: "ske-depth-label" }, t("presets.scanDepth")),
+              h(
+                "select",
+                {
+                  className: "ske-depth-select",
+                  value: String(scanDepth),
+                  disabled: busy,
+                  "aria-label": t("presets.scanDepth"),
+                  title: t("presets.scanDepthHint"),
+                  onChange: (event) => onScanDepthChange(event.target.value),
+                },
+                DEPTH_OPTIONS.map((depth) =>
+                  h(
+                    "option",
+                    { key: depth, value: String(depth) },
+                    t("presets.scanDepthOption", { depth }),
+                  ),
+                ),
+              ),
             ),
             h(
               ActionButton,
