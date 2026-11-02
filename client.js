@@ -336,7 +336,8 @@ window.__ModuleLoader__.load({
 .ske-section-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;row-gap:8px;}
 .ske-section-title{flex:none;font-size:14px;font-weight:500;color:var(--dsw-alias-label-primary,inherit);}
 .ske-depth{display:inline-flex;align-items:center;gap:6px;flex:none;margin-right:auto;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);}
-.ske-depth-select{box-sizing:border-box;height:28px;padding:0 6px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:8px;background:transparent;color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:12px;line-height:18px;cursor:pointer;outline:none;}
+.ske-depth-select{box-sizing:border-box;height:28px;padding:0 6px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:8px;background-color:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:12px;line-height:18px;cursor:pointer;outline:none;}
+.ske-depth-select option{background-color:var(--dsw-alias-bg-overlay,#ffffff);color:var(--dsw-alias-label-primary,#000000);}
 .ske-depth-select:focus-visible{border-color:var(--dsw-alias-brand-primary,#4a7dff);}
 .ske-depth-select:disabled{opacity:.55;cursor:default;}
 .ske-section-title{font-size:14px;font-weight:500;color:var(--dsw-alias-label-primary,inherit);}
@@ -1050,6 +1051,18 @@ window.__ModuleLoader__.load({
       const storedDepth = state && typeof state.scanDepth === "number" ? state.scanDepth : 1;
       const [depthDraft, setDepthDraft] = React.useState(null);
       const scanDepth = depthDraft === null ? storedDepth : depthDraft;
+      // A native select popup takes its chrome from `color-scheme`; derive it from
+      // the surface the page is actually painted on, not from the OS setting.
+      const surfaceIsDark = React.useMemo(() => {
+        try {
+          const digits = String(getComputedStyle(document.body).backgroundColor).match(/\d+/g);
+          if (digits === null) return false;
+          const [r, g, b] = digits.slice(0, 3).map(Number);
+          return (r * 299 + g * 587 + b * 114) / 1000 < 128;
+        } catch {
+          return false;
+        }
+      }, [state]);
       const onScanDepthChange = (value) => {
         const depth = Number(value);
         if (!Number.isFinite(depth) || depth === scanDepth) return;
@@ -1335,6 +1348,7 @@ window.__ModuleLoader__.load({
                 {
                   className: "ske-depth-select",
                   value: String(scanDepth),
+                  style: { colorScheme: surfaceIsDark ? "dark" : "light" },
                   disabled: pending === "scanDepth",
                   "aria-label": t("presets.scanDepth"),
                   title: t("presets.scanDepthHint"),

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- **修复深色模式下扫描层级下拉的弹出列表看不清**：原生 `<select>` 的弹出层由浏览器绘制，此前只设了控件文字色（深色下为白色）却没设 `option` 背景，于是白底白字。现在给 `option` 使用 `--dsw-alias-bg-overlay` / `--dsw-alias-label-primary`，控件本身用 `--dsw-alias-bg-layer-1`，并按页面实际背景亮度设置 `color-scheme`，让原生装饰（边框、滚动条、选中高亮）也跟随主题。
+
 ## 0.4.0
 
 **页面结构与交互重做。**
