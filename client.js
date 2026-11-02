@@ -78,9 +78,25 @@ window.__ModuleLoader__.load({
     const HostToast = hostWidget("Toast");
     const HostDisclosureRow = hostWidget("DisclosureRow");
     const HostChevronRight = hostWidget("IconChevronRightOutlineRegular");
+    const HostInput = hostWidget("Input");
+    const HostSegmented = hostWidget("SegmentedControl");
 
     const NS = "skillsExt";
     const PACKAGE = "@ancircle0/dsh-skills-ext";
+    /**
+     * Error codes whose Host message carries diagnostic detail worth showing next to
+     * the localized sentence: OS errors, JSON parser messages, write failures. Pure
+     * validation codes are fully named by the client dictionary instead.
+     */
+    const DETAILED_ERROR_CODES = new Set([
+      "link-failed",
+      "unlink-failed",
+      "presets-write-failed",
+      "settings-write-failed",
+      "config-init-failed",
+      "mcp-write-failed",
+      "mcp-invalid-json",
+    ]);
     /** Sidebar panel key: also the `main` slot key and the panellist entry id. */
     const PANEL_ID = "skills-ext";
     /** Depth choices offered by the scan-depth selector (mirrors core's 1–10). */
@@ -180,6 +196,78 @@ window.__ModuleLoader__.load({
           parameters: [requestCodec(`${PACKAGE}#SkillsExtPathRequest`)],
           result: strictClientCodec(`${PACKAGE}#SkillsExtStateResult`),
         },
+        {
+          id: `${PACKAGE}#skillsExt/mcpState`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "mcpState",
+          invocation: { kind: "direct" },
+          parameters: [],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtMcpResult`),
+        },
+        {
+          id: `${PACKAGE}#skillsExt/mcpCreate`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "mcpCreate",
+          invocation: { kind: "direct" },
+          parameters: [requestCodec(`${PACKAGE}#SkillsExtMcpServerRequest`)],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtMcpResult`),
+        },
+        {
+          id: `${PACKAGE}#skillsExt/mcpUpdate`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "mcpUpdate",
+          invocation: { kind: "direct" },
+          parameters: [requestCodec(`${PACKAGE}#SkillsExtMcpServerRequest`)],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtMcpResult`),
+        },
+        {
+          id: `${PACKAGE}#skillsExt/mcpRemove`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "mcpRemove",
+          invocation: { kind: "direct" },
+          parameters: [requestCodec(`${PACKAGE}#SkillsExtIdRequest`)],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtMcpResult`),
+        },
+        {
+          id: `${PACKAGE}#skillsExt/mcpToggle`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "mcpToggle",
+          invocation: { kind: "direct" },
+          parameters: [requestCodec(`${PACKAGE}#SkillsExtToggleRequest`)],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtMcpResult`),
+        },
+        {
+          id: `${PACKAGE}#skillsExt/mcpRestart`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "mcpRestart",
+          invocation: { kind: "direct" },
+          parameters: [requestCodec(`${PACKAGE}#SkillsExtIdRequest`)],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtMcpResult`),
+        },
+        {
+          id: `${PACKAGE}#skillsExt/mcpRaw`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "mcpRaw",
+          invocation: { kind: "direct" },
+          parameters: [],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtMcpRawResult`),
+        },
+        {
+          id: `${PACKAGE}#skillsExt/mcpSaveRaw`,
+          service: "skillsExt",
+          namespace: "skillsExt",
+          method: "mcpSaveRaw",
+          invocation: { kind: "direct" },
+          parameters: [requestCodec(`${PACKAGE}#SkillsExtMcpRawRequest`)],
+          result: strictClientCodec(`${PACKAGE}#SkillsExtMcpResult`),
+        },
       ],
     };
 
@@ -239,8 +327,74 @@ window.__ModuleLoader__.load({
       "errors.link-failed": "创建链接失败",
       "errors.unlink-failed": "删除链接失败",
       "notice.depthSaved": "扫描层级已保存为 {depth} 级（下次添加或刷新生效）",
+      "view.skills": "技能",
+      "view.mcp": "MCP 服务器",
+      "mcp.add": "新增服务器",
+      "mcp.editJson": "编辑 JSON",
+      "mcp.empty": "还没有 MCP 服务器：点「新增服务器」填表，或「编辑 JSON」直接粘贴。",
+      "mcp.count": "共 {count} 个服务器",
+      "mcp.enable": "启用",
+      "mcp.disable": "停用",
+      "mcp.edit": "编辑",
+      "mcp.restart": "重启",
+      "mcp.created": "已新增 {name}",
+      "mcp.updated": "已更新 {name}",
+      "mcp.removed": "已删除 {name}",
+      "mcp.toggled": "已保存 {name} 的启用状态",
+      "mcp.restarted": "已重启 {name}",
+      "mcp.rawSaved": "已保存 JSON",
+      "mcp.toolCount": "{count} 个工具",
+      "mcp.noTools": "已连接但尚未注册工具：该服务器可能不支持 tools，或连接失败（详见宿主日志）",
+      "mcp.failedHint": "启动失败：命令或参数不对，或依赖/环境缺失（详见宿主日志）。",
+      "mcp.envKeys": "环境变量：{keys}",
+      "mcp.headerKeys": "请求头：{keys}",
+      "mcp.phase.pending": "连接中",
+      "mcp.phase.active": "运行中",
+      "mcp.phase.stopped": "已停用",
+      "mcp.phase.failed": "失败",
+      "mcp.form.create": "新增 MCP 服务器",
+      "mcp.form.edit": "编辑 {name}",
+      "mcp.field.name": "serverName（决定工具名前缀）",
+      "mcp.field.transport": "传输方式",
+      "mcp.field.command": "命令",
+      "mcp.field.args": "参数（每行一个）",
+      "mcp.field.env": "环境变量（每行 KEY=VALUE）",
+      "mcp.field.cwd": "工作目录（可选）",
+      "mcp.field.url": "URL",
+      "mcp.field.headers": "请求头（每行 KEY=VALUE）",
+      "mcp.field.note": "备注（可选）",
+      "mcp.field.timeout": "调用超时（毫秒，可选）",
+      "mcp.field.failOnStartup": "启动失败即视为错误",
+      "mcp.save": "保存",
+      "mcp.cancel": "取消",
+      "mcp.json.title": "手动编辑 JSON",
+      "mcp.json.hint": "支持 servers 数组、裸数组或 mcpServers 对象三种形状，transport 会按字段自动推断",
+      "mcp.json.save": "保存 JSON",
+      "mcp.unavailable": "宿主没有提供 MCP 客户端（@deepseek-ai/dsh-mcp-client），无法管理服务器。",
+      "errors.config-init-failed": "无法初始化插件配置目录",
+      "errors.add-failed": "添加预设路径失败",
+      "errors.remove-failed": "删除预设路径失败",
+      "errors.preset-missing": "预设路径不存在",
+      "errors.settings-write-failed": "保存设置失败",
+      "errors.mcp-state-failed": "读取 MCP 服务器状态失败",
+      "errors.mcp-invalid-name": "serverName 不合法（只允许字母、数字、下划线、连字符，1–32 位）",
+      "errors.mcp-duplicate-name": "serverName 已被其他条目使用",
+      "errors.mcp-invalid-transport": "传输方式必须是 stdio 或 streamable-http",
+      "errors.mcp-missing-command": "stdio 传输必须填写命令",
+      "errors.mcp-invalid-env": "env 必须是字符串键值",
+      "errors.mcp-invalid-url": "streamable-http 传输必须填写 http(s) URL",
+      "errors.mcp-invalid-headers": "headers 必须是字符串键值",
+      "errors.mcp-invalid-timeout": "调用超时必须是正数",
+      "errors.mcp-invalid-instructions": "maxInstructionBytes 必须是正整数",
+      "errors.mcp-invalid-reconnect": "重连参数必须是正数",
+      "errors.mcp-invalid-json": "JSON 解析失败",
+      "errors.mcp-invalid-shape": "JSON 结构不对：需要 servers 数组、裸数组或 mcpServers 对象",
+      "errors.mcp-missing": "找不到该 MCP 服务器",
+      "errors.mcp-write-failed": "写入 mcp.json 失败",
       "errors.state-failed": "读取状态失败",
       "errors.settings-failed": "保存设置失败",
+      "mcp.pickDir": "选择目录",
+      "errors.detail": "（{detail}）",
       "errors.unknown": "操作失败",
     };
 
@@ -303,8 +457,74 @@ window.__ModuleLoader__.load({
       "errors.link-failed": "Could not create the link",
       "errors.unlink-failed": "Could not remove the link",
       "notice.depthSaved": "Scan depth saved as {depth} (applies on the next add or refresh)",
+      "view.skills": "Skills",
+      "view.mcp": "MCP servers",
+      "mcp.add": "Add server",
+      "mcp.editJson": "Edit JSON",
+      "mcp.empty": "No MCP servers yet: add one with the form, or paste JSON with “Edit JSON”.",
+      "mcp.count": "{count} servers",
+      "mcp.enable": "Enable",
+      "mcp.disable": "Disable",
+      "mcp.edit": "Edit",
+      "mcp.restart": "Restart",
+      "mcp.created": "Added {name}",
+      "mcp.updated": "Updated {name}",
+      "mcp.removed": "Removed {name}",
+      "mcp.toggled": "Saved the enabled state of {name}",
+      "mcp.restarted": "Restarted {name}",
+      "mcp.rawSaved": "JSON saved",
+      "mcp.toolCount": "{count} tools",
+      "mcp.noTools": "Connected but no tools are registered: the server may not expose tools, or the connection failed (see the host log)",
+      "mcp.failedHint": "Startup failed: check the command, its arguments, and the dependencies (see the host log).",
+      "mcp.envKeys": "Environment: {keys}",
+      "mcp.headerKeys": "Headers: {keys}",
+      "mcp.phase.pending": "Connecting",
+      "mcp.phase.active": "Running",
+      "mcp.phase.stopped": "Stopped",
+      "mcp.phase.failed": "Failed",
+      "mcp.form.create": "Add an MCP server",
+      "mcp.form.edit": "Edit {name}",
+      "mcp.field.name": "serverName (the tool-name prefix)",
+      "mcp.field.transport": "Transport",
+      "mcp.field.command": "Command",
+      "mcp.field.args": "Arguments (one per line)",
+      "mcp.field.env": "Environment (KEY=VALUE per line)",
+      "mcp.field.cwd": "Working directory (optional)",
+      "mcp.field.url": "URL",
+      "mcp.field.headers": "Headers (KEY=VALUE per line)",
+      "mcp.field.note": "Note (optional)",
+      "mcp.field.timeout": "Call timeout in ms (optional)",
+      "mcp.field.failOnStartup": "Treat a startup failure as an error",
+      "mcp.save": "Save",
+      "mcp.cancel": "Cancel",
+      "mcp.json.title": "Edit JSON by hand",
+      "mcp.json.hint": "Accepts a servers array, a bare array, or an mcpServers object; the transport is inferred from the fields",
+      "mcp.json.save": "Save JSON",
+      "mcp.unavailable": "This host does not provide the MCP client (@deepseek-ai/dsh-mcp-client), so servers cannot be managed.",
+      "errors.config-init-failed": "Could not create the plugin config directory",
+      "errors.add-failed": "Could not add the preset path",
+      "errors.remove-failed": "Could not remove the preset path",
+      "errors.preset-missing": "That preset path does not exist",
+      "errors.settings-write-failed": "Could not save the setting",
+      "errors.mcp-state-failed": "Could not read the MCP server state",
+      "errors.mcp-invalid-name": "serverName is invalid (letters, digits, underscore and hyphen, 1–32 characters)",
+      "errors.mcp-duplicate-name": "Another server already uses that serverName",
+      "errors.mcp-invalid-transport": "Transport must be stdio or streamable-http",
+      "errors.mcp-missing-command": "stdio transport requires a command",
+      "errors.mcp-invalid-env": "env must be a string map",
+      "errors.mcp-invalid-url": "streamable-http transport requires an http(s) URL",
+      "errors.mcp-invalid-headers": "headers must be a string map",
+      "errors.mcp-invalid-timeout": "The call timeout must be a positive number",
+      "errors.mcp-invalid-instructions": "maxInstructionBytes must be a positive integer",
+      "errors.mcp-invalid-reconnect": "Reconnect values must be positive numbers",
+      "errors.mcp-invalid-json": "Could not parse the JSON",
+      "errors.mcp-invalid-shape": "Unexpected JSON shape: expected a servers array, a bare array, or an mcpServers object",
+      "errors.mcp-missing": "That MCP server does not exist",
+      "errors.mcp-write-failed": "Could not write mcp.json",
       "errors.state-failed": "Could not read the state",
       "errors.settings-failed": "Could not save the setting",
+      "mcp.pickDir": "Choose folder",
+      "errors.detail": " ({detail})",
       "errors.unknown": "The operation failed",
     };
 
@@ -357,6 +577,7 @@ window.__ModuleLoader__.load({
 .ske-row-sub{font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary,inherit);opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ske-row-actions{flex:none;display:flex;align-items:center;gap:6px;}
 .ske-items{display:flex;flex-direction:column;gap:0;}
+.ske-segment{display:flex;align-items:center;gap:8px;}
 .ske-item{border:none;border-radius:0;}
 .ske-item + .ske-item{border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));}
 .ske-item-row{gap:8px;padding:14px 0;border-radius:8px;}
@@ -369,6 +590,23 @@ window.__ModuleLoader__.load({
 .ske-item-path{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;}
 .ske-item-actions{display:flex;align-items:center;gap:6px;flex:none;margin-left:auto;}
 .ske-item-body{padding:0 0 6px 0;}
+.ske-mcp-name{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ske-mcp-card{display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));border-radius:10px;}
+.ske-mcp-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.ske-mcp-card-title{font-size:13px;font-weight:500;}
+.ske-mcp-hint{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);word-break:break-all;}
+.ske-mcp-error{font-size:12px;line-height:18px;color:var(--dsw-alias-state-error-primary,#d94a4a);white-space:pre-wrap;}
+.ske-mcp-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+.ske-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
+.ske-field{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.ske-field-inline{display:flex;align-items:center;gap:8px;}
+.ske-field-label{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);}
+.ske-field-input{box-sizing:border-box;width:100%;height:28px;padding:0 8px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:8px;background-color:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-label-primary,inherit);font-family:inherit;font-size:12px;}
+.ske-field-area{box-sizing:border-box;width:100%;min-height:64px;padding:6px 8px;border:1px solid var(--dsw-alias-border-l2,rgba(128,128,128,.28));border-radius:8px;background-color:var(--dsw-alias-bg-layer-1,transparent);color:var(--dsw-alias-label-primary,inherit);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:18px;resize:vertical;}
+.ske-field-input:focus-visible,.ske-field-area:focus-visible{outline:none;border-color:var(--dsw-alias-brand-primary,#4a7dff);}
+.ske-mcp-json{min-height:220px;}
+.ske-pick-field{display:flex;align-items:flex-start;gap:6px;min-width:0;}
+.ske-pick-field > *:first-child{flex:1;min-width:0;}
 .ske-chevron-fallback{display:inline-flex;align-items:center;justify-content:center;width:14px;font-size:14px;line-height:1;color:var(--dsw-alias-label-secondary,inherit);}
 .ske-empty-tight{padding:6px 12px;}
 .ske-tag{flex:none;font-size:11px;line-height:16px;padding:0 6px;border-radius:6px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));color:var(--dsw-alias-label-secondary,inherit);}
@@ -830,6 +1068,16 @@ window.__ModuleLoader__.load({
       else next.add(path);
       store.set(next);
     };
+      // MCP: one shared snapshot for both surfaces, a per-mount form draft, the raw
+      // editor text, and the view switch.
+      const mcpStore = page.mcpStore && typeof page.mcpStore.set === "function" ? page.mcpStore : null;
+      const mcpSnapshot = useStore(mcpStore, null);
+      const mcpServers = mcpSnapshot && Array.isArray(mcpSnapshot.servers) ? mcpSnapshot.servers : [];
+      const [view, setView] = React.useState("skills");
+      const [mcpForm, setMcpForm] = React.useState(null);
+      const [mcpText, setMcpText] = React.useState(null);
+      // Live elements of the pickable form fields, so a chosen path lands at the caret.
+      const fieldRefs = React.useRef({});
       const [ownState, setOwnState] = React.useState(null);
       const state = stateStore === null ? ownState : sharedState;
       const setState = React.useCallback(
@@ -868,7 +1116,10 @@ window.__ModuleLoader__.load({
           if (code !== null) {
             const key = `errors.${code}`;
             const localized = t(key);
-            if (localized !== key) return detail === "" ? localized : `${localized}（${detail}）`;
+            if (localized !== key) {
+              const informative = detail !== "" && DETAILED_ERROR_CODES.has(code);
+              return informative ? localized + t("errors.detail", { detail }) : localized;
+            }
             return detail === "" ? code : detail;
           }
           return detail === "" ? String(failure) : detail;
@@ -965,6 +1216,20 @@ window.__ModuleLoader__.load({
           .finally(() => {
             if (!cancelled && alive.current) setPending(null);
           });
+        // The MCP list is a second snapshot. A host without the client answers
+        // `available: false`, which the MCP tab reports instead of failing the page.
+        if (typeof current.remote.mcpState === "function") {
+          Promise.resolve(current.remote.mcpState())
+            .then((result) => {
+              if (cancelled || !alive.current || mcpStore === null) return;
+              try {
+                mcpStore.set(readAnswer(result));
+              } catch {
+                /* the tab shows the unavailable notice */
+              }
+            })
+            .catch(() => {});
+        }
         return () => {
           cancelled = true;
         };
@@ -1208,6 +1473,581 @@ window.__ModuleLoader__.load({
         switchControl,
       );
 
+      // ---- MCP servers -------------------------------------------------------
+      // The list lives in the plugin's own JSON and every server is mounted as a
+      // child `@deepseek-ai/dsh-mcp-client` plugin, so these handlers only talk to
+      // the Host Remote methods.
+      const mcpCall = (key, call, okText) => {
+        if (remote === null || remote === undefined) {
+          setNotice({ kind: "error", text: t("errors.state-failed") });
+          return;
+        }
+        setPending(key);
+        void (async () => {
+          try {
+            const snapshot = readAnswer(await call());
+            if (!alive.current) return;
+            if (mcpStore !== null) mcpStore.set(snapshot);
+            const text = typeof okText === "function" ? okText(snapshot) : okText;
+            setNotice(text ? { kind: "ok", text } : null);
+          } catch (error) {
+            if (!alive.current) return;
+            setNotice({ kind: "error", text: describeFailure(error) });
+          } finally {
+            if (alive.current) setPending(null);
+          }
+        })();
+      };
+
+      const stopEvent = (event) => {
+        if (event && typeof event.stopPropagation === "function") event.stopPropagation();
+      };
+
+      const refreshMcp = () => mcpCall("mcpRefresh", () => remote.mcpState());
+
+      const toggleMcp = (server) =>
+        mcpCall(
+          `mcpToggle:${server.id}`,
+          () => remote.mcpToggle({ id: server.id, enabled: server.enabled === false }),
+          t("mcp.toggled", { name: server.serverName }),
+        );
+
+      const restartMcp = (server) =>
+        mcpCall(
+          `mcpRestart:${server.id}`,
+          () => remote.mcpRestart({ id: server.id }),
+          t("mcp.restarted", { name: server.serverName }),
+        );
+
+      const removeMcp = (server) =>
+        mcpCall(
+          `mcpRemove:${server.id}`,
+          () => remote.mcpRemove({ id: server.id }),
+          t("mcp.removed", { name: server.serverName }),
+        );
+
+      /** Open the host folder picker for one field and insert the chosen path. */
+      const openDirectoryPicker = (field) => {
+        const chooser = uiWorkspace;
+        if (chooser === null || chooser === undefined || typeof chooser.pickDirectory !== "function") {
+          setNotice({ kind: "error", text: t("notice.browseUnavailable") });
+          return;
+        }
+        setPending(`pick:${field}`);
+        Promise.resolve(chooser.pickDirectory())
+          .then((picked) => {
+            if (!alive.current) return;
+            const path = typeof picked === "string" ? picked.trim() : "";
+            if (path !== "") insertPath(field, path);
+          })
+          .catch((error) => {
+            if (!alive.current) return;
+            setNotice({ kind: "error", text: describeFailure(error) });
+          })
+          .finally(() => {
+            if (alive.current) setPending(null);
+          });
+      };
+
+      /** Insert one path into a field at the caret, quoting it when it has spaces. */
+      const insertPath = (field, rawPath) => {
+        if (mcpForm === null || field === undefined) return;
+        const element = fieldRefs.current[field];
+        const draft = mcpForm.draft;
+        const current = String(draft[field] ?? "");
+        const start = element && typeof element.selectionStart === "number" ? element.selectionStart : current.length;
+        const end = element && typeof element.selectionEnd === "number" ? element.selectionEnd : current.length;
+        const text = /\s/.test(rawPath) ? `"${rawPath}"` : rawPath;
+        const next = current.slice(0, start) + text + current.slice(end);
+        setMcpForm({ ...mcpForm, draft: { ...draft, [field]: next } });
+        const caret = start + text.length;
+        // Restore the caret after React paints the new value.
+        if (typeof requestAnimationFrame === "function") {
+          requestAnimationFrame(() => {
+            const target = fieldRefs.current[field];
+            if (!target || typeof target.focus !== "function") return;
+            target.focus();
+            if (typeof target.setSelectionRange === "function") target.setSelectionRange(caret, caret);
+          });
+        }
+      };
+
+      /** Split `KEY=VALUE` lines; blank lines and `#` comments are ignored. */
+      const pairsOf = (text) => {
+        const out = {};
+        for (const line of String(text ?? "").split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (trimmed === "" || trimmed.startsWith("#")) continue;
+          const at = trimmed.indexOf("=");
+          if (at <= 0) continue;
+          out[trimmed.slice(0, at).trim()] = trimmed.slice(at + 1).trim();
+        }
+        return out;
+      };
+
+      const draftOf = (server) => ({
+        serverName: server.serverName ?? "",
+        transport: server.transport ?? "stdio",
+        command: server.command ?? "",
+        argsText: (Array.isArray(server.args) ? server.args : []).join("\n"),
+        envText: Object.entries(server.env ?? {}).map(([key, value]) => `${key}=${value}`).join("\n"),
+        cwd: server.cwd ?? "",
+        url: server.url ?? "",
+        headersText: Object.entries(server.headers ?? {}).map(([key, value]) => `${key}=${value}`).join("\n"),
+        note: server.note ?? "",
+        timeoutMs: server.toolCallTimeoutMs === undefined ? "" : String(server.toolCallTimeoutMs),
+        failOnStartupError: server.failOnStartupError === true,
+        enabled: server.enabled !== false,
+      });
+
+      const emptyDraft = () => ({
+        serverName: "",
+        transport: "stdio",
+        command: "",
+        argsText: "",
+        envText: "",
+        cwd: "",
+        url: "",
+        headersText: "",
+        note: "",
+        timeoutMs: "",
+        failOnStartupError: false,
+        enabled: true,
+      });
+
+      const serverOfDraft = (draft) => {
+        const server = {
+          serverName: draft.serverName.trim(),
+          transport: draft.transport,
+          enabled: draft.enabled !== false,
+        };
+        if (draft.transport === "stdio") {
+          server.command = draft.command.trim();
+          server.args = draft.argsText
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => line !== "");
+          const env = pairsOf(draft.envText);
+          if (Object.keys(env).length > 0) server.env = env;
+          if (draft.cwd.trim() !== "") server.cwd = draft.cwd.trim();
+        } else {
+          server.url = draft.url.trim();
+          const headers = pairsOf(draft.headersText);
+          if (Object.keys(headers).length > 0) server.headers = headers;
+        }
+        if (draft.note.trim() !== "") server.note = draft.note.trim();
+        const timeout = Number(draft.timeoutMs);
+        if (Number.isFinite(timeout) && timeout > 0) server.toolCallTimeoutMs = Math.round(timeout);
+        server.failOnStartupError = draft.failOnStartupError === true;
+        return server;
+      };
+
+      const submitMcpForm = () => {
+        if (mcpForm === null) return;
+        const server = serverOfDraft(mcpForm.draft);
+        const close = () => setMcpForm(null);
+        if (mcpForm.mode === "edit") {
+          mcpCall(`mcpUpdate:${mcpForm.id}`, () => remote.mcpUpdate({ id: mcpForm.id, server }), () => {
+            close();
+            return t("mcp.updated", { name: server.serverName });
+          });
+          return;
+        }
+        mcpCall("mcpCreate", () => remote.mcpCreate({ server }), () => {
+          close();
+          return t("mcp.created", { name: server.serverName });
+        });
+      };
+
+      const openMcpRaw = () => {
+        if (remote === null || remote === undefined) return;
+        setPending("mcpRawLoad");
+        void (async () => {
+          try {
+            const value = readAnswer(await remote.mcpRaw());
+            if (!alive.current) return;
+            setMcpText(typeof value.text === "string" ? value.text : "");
+          } catch (error) {
+            if (!alive.current) return;
+            setNotice({ kind: "error", text: describeFailure(error) });
+          } finally {
+            if (alive.current) setPending(null);
+          }
+        })();
+      };
+
+      const saveMcpRaw = () =>
+        mcpCall("mcpRawSave", () => remote.mcpSaveRaw({ text: mcpText ?? "" }), () => {
+          setMcpText(null);
+          return t("mcp.rawSaved");
+        });
+
+      /** Host switch with a plain checkbox fallback. */
+      const mcpSwitch = (checked, onChange, label) =>
+        HostSwitch
+          ? h(HostSwitch, { checked, onChange, onCheckedChange: onChange, label })
+          : h("input", { type: "checkbox", checked, onChange: (event) => onChange(event.target.checked) });
+
+      const mcpField = (label, control) =>
+        h("label", { className: "ske-field" }, h("span", { className: "ske-field-label" }, label), control);
+
+      const mcpTextInput = (draft, update, key, placeholder) => {
+        const props = {
+          className: "ske-field-input",
+          value: draft[key],
+          placeholder,
+          onChange: (event) => update({ [key]: event.target.value }),
+          ref: (element) => {
+            fieldRefs.current[key] = element;
+          },
+        };
+        return HostInput ? h(HostInput, props) : h("input", props);
+      };
+
+      const mcpArea = (draft, update, key, placeholder) =>
+        h("textarea", {
+          className: "ske-field-area",
+          rows: 3,
+          spellCheck: false,
+          value: draft[key],
+          placeholder,
+          onChange: (event) => update({ [key]: event.target.value }),
+          ref: (element) => {
+            fieldRefs.current[key] = element;
+          },
+        });
+
+      /** One field on a full row, with an optional folder-picker button beside it. */
+      const mcpFieldRow = (label, control, pickKey) =>
+        h(
+          "div",
+          { className: "ske-field" },
+          h("span", { className: "ske-field-label" }, label),
+          pickKey === undefined
+            ? control
+            : h(
+                "div",
+                { className: "ske-pick-field" },
+                control,
+                h(
+                  ActionButton,
+                  {
+                    variant: "outline",
+                    disabled: pending === `pick:${pickKey}`,
+                    onClick: () => openDirectoryPicker(pickKey),
+                  },
+                  t("mcp.pickDir"),
+                ),
+              ),
+        );
+
+      const mcpFormCard = () => {
+        const draft = mcpForm.draft;
+        const update = (patch) => setMcpForm({ ...mcpForm, draft: { ...draft, ...patch } });
+        const transportOptions = [
+          { value: "stdio", label: "stdio" },
+          { value: "streamable-http", label: "streamable-http" },
+        ];
+        const transport = HostSegmented
+          ? h(HostSegmented, {
+              value: draft.transport,
+              options: transportOptions,
+              onChange: (value) => update({ transport: value }),
+            })
+          : h(
+              "select",
+              {
+                className: "ske-depth-select",
+                value: draft.transport,
+                onChange: (event) => update({ transport: event.target.value }),
+              },
+              transportOptions.map((option) => h("option", { key: option.value, value: option.value }, option.label)),
+            );
+        return h(
+          "div",
+          { className: "ske-mcp-card" },
+          h(
+            "div",
+            { className: "ske-mcp-card-head" },
+            h(
+              "span",
+              { className: "ske-mcp-card-title" },
+              mcpForm.mode === "edit" ? t("mcp.form.edit", { name: draft.serverName }) : t("mcp.form.create"),
+            ),
+          ),
+          h(
+            "div",
+            { className: "ske-fields" },
+            mcpField(t("mcp.field.name"), mcpTextInput(draft, update, "serverName", "github")),
+            mcpField(t("mcp.field.transport"), transport),
+          ),
+          // Command, working directory, arguments and environment each own a row.
+          draft.transport === "stdio"
+            ? mcpFieldRow(t("mcp.field.command"), mcpTextInput(draft, update, "command", "npx"), "command")
+            : null,
+          draft.transport === "stdio"
+            ? mcpFieldRow(t("mcp.field.cwd"), mcpTextInput(draft, update, "cwd", ""), "cwd")
+            : null,
+          draft.transport === "stdio"
+            ? mcpFieldRow(
+                t("mcp.field.args"),
+                mcpArea(draft, update, "argsText", "-y\n@modelcontextprotocol/server-github"),
+                "argsText",
+              )
+            : null,
+          draft.transport === "stdio"
+            ? mcpFieldRow(t("mcp.field.env"), mcpArea(draft, update, "envText", "GITHUB_TOKEN=..."))
+            : null,
+          draft.transport === "stdio"
+            ? null
+            : mcpFieldRow(t("mcp.field.url"), mcpTextInput(draft, update, "url", "https://example.com/mcp")),
+          draft.transport === "stdio"
+            ? null
+            : mcpFieldRow(t("mcp.field.headers"), mcpArea(draft, update, "headersText", "Authorization=Bearer ...")),
+          h(
+            "div",
+            { className: "ske-fields" },
+            mcpField(t("mcp.field.note"), mcpTextInput(draft, update, "note", "")),
+            mcpField(t("mcp.field.timeout"), mcpTextInput(draft, update, "timeoutMs", "60000")),
+          ),
+          h(
+            "label",
+            { className: "ske-field-inline" },
+            mcpSwitch(draft.failOnStartupError, (next) => update({ failOnStartupError: next }), t("mcp.field.failOnStartup")),
+            h("span", { className: "ske-field-label" }, t("mcp.field.failOnStartup")),
+          ),
+          h(
+            "div",
+            { className: "ske-mcp-actions" },
+            h(ActionButton, { variant: "primary", disabled: pending !== null, onClick: submitMcpForm }, t("mcp.save")),
+            h(
+              ActionButton,
+              {
+                variant: "outline",
+                onClick: () => setMcpForm(null),
+              },
+              t("mcp.cancel"),
+            ),
+          ),
+        );
+      };
+
+      const mcpRawCard = () =>
+        h(
+          "div",
+          { className: "ske-mcp-card" },
+          h(
+            "div",
+            { className: "ske-mcp-card-head" },
+            h("span", { className: "ske-mcp-card-title" }, t("mcp.json.title")),
+            h(
+              "span",
+              { className: "ske-mcp-hint" },
+              mcpSnapshot && mcpSnapshot.file ? mcpSnapshot.file : "",
+            ),
+          ),
+          h("div", { className: "ske-mcp-hint" }, t("mcp.json.hint")),
+          h("textarea", {
+            className: "ske-field-area ske-mcp-json",
+            rows: 14,
+            spellCheck: false,
+            value: mcpText ?? "",
+            onChange: (event) => setMcpText(event.target.value),
+          }),
+          h(
+            "div",
+            { className: "ske-mcp-actions" },
+            h(
+              ActionButton,
+              { variant: "primary", disabled: pending === "mcpRawSave", onClick: saveMcpRaw },
+              t("mcp.json.save"),
+            ),
+            h(ActionButton, { variant: "outline", onClick: () => setMcpText(null) }, t("mcp.cancel")),
+          ),
+        );
+
+      const mcpRow = (server) => {
+        const key = `mcp:${server.id}`;
+        const status = server.status ?? { phase: "stopped", toolCount: 0 };
+        const tone =
+          status.phase === "active"
+            ? "success"
+            : status.phase === "failed"
+              ? "danger"
+              : status.phase === "pending"
+                ? "info"
+                : "neutral";
+        const summary = h(
+          "span",
+          { className: "ske-item-summary" },
+          h(
+            "span",
+            { className: "ske-item-main" },
+            h("span", { className: "ske-mcp-name" }, server.serverName),
+            h(Badge, { tone: "neutral" }, server.transport),
+            h(Badge, { tone }, t(`mcp.phase.${status.phase}`)),
+            status.toolCount > 0 ? h(Badge, { tone: "info" }, t("mcp.toolCount", { count: status.toolCount })) : null,
+          ),
+          h(
+            "span",
+            { className: "ske-item-actions", onClick: stopEvent },
+            mcpSwitch(server.enabled !== false, () => toggleMcp(server), server.serverName),
+          ),
+        );
+        const body = h(
+          "div",
+          { className: "ske-item-body" },
+          h("div", { className: "ske-row-sub" }, server.endpoint || ""),
+          server.note ? h("div", { className: "ske-row-desc" }, server.note) : null,
+          server.env ? h("div", { className: "ske-row-sub" }, t("mcp.envKeys", { keys: Object.keys(server.env).join(", ") })) : null,
+          server.headers
+            ? h("div", { className: "ske-row-sub" }, t("mcp.headerKeys", { keys: Object.keys(server.headers).join(", ") }))
+            : null,
+          status.error !== undefined
+            ? h("div", { className: "ske-mcp-error" }, status.error)
+            : status.phase === "failed"
+              ? h("div", { className: "ske-mcp-error" }, t("mcp.failedHint"))
+              : status.phase === "active" && status.toolCount === 0
+                ? h("div", { className: "ske-mcp-hint" }, t("mcp.noTools"))
+                : null,
+          h(
+            "div",
+            { className: "ske-mcp-actions" },
+            h(
+              ActionButton,
+              {
+                variant: "outline",
+                onClick: (event) => {
+                  stopEvent(event);
+                  setMcpForm({ mode: "edit", id: server.id, draft: draftOf(server) });
+                  setMcpText(null);
+                },
+              },
+              t("mcp.edit"),
+            ),
+            h(
+              ActionButton,
+              {
+                variant: "outline",
+                disabled: pending === `mcpRestart:${server.id}` || server.enabled === false,
+                onClick: (event) => {
+                  stopEvent(event);
+                  restartMcp(server);
+                },
+              },
+              t("mcp.restart"),
+            ),
+            h(
+              ActionButton,
+              {
+                variant: "outline",
+                danger: true,
+                disabled: pending === `mcpRemove:${server.id}`,
+                onClick: (event) => {
+                  stopEvent(event);
+                  removeMcp(server);
+                },
+              },
+              t("presets.remove"),
+            ),
+          ),
+        );
+        if (!HostDisclosureRow) {
+          return h(
+            "div",
+            { className: "ske-item ske-item-static", key },
+            h("div", { className: "ske-item-summary-wrap" }, summary),
+            body,
+          );
+        }
+        return h(
+          HostDisclosureRow,
+          {
+            key,
+            className: "ske-item",
+            rowClassName: "ske-item-row",
+            titleClassName: "ske-item-title",
+            contentClassName: "ske-item-shimmer",
+            contentLayoutClassName: "ske-item-shimmer-content",
+            title: summary,
+            icon: HostChevronRight
+              ? h(HostChevronRight, { size: 14 })
+              : h("span", { className: "ske-chevron-fallback" }, "›"),
+            previewChevron: false,
+            open: isExpanded(key),
+            expandable: true,
+            expandOnRowClick: true,
+            onToggle: () => toggleExpanded(key),
+          },
+          body,
+        );
+      };
+
+      const mcpView = () =>
+        h(
+          "section",
+          { className: "ske-section" },
+          h(
+            "div",
+            { className: "ske-section-head" },
+            h(
+              ActionButton,
+              {
+                variant: "primary",
+                disabled: pending === "mcpCreate",
+                onClick: () => {
+                  setMcpText(null);
+                  setMcpForm({ mode: "create", draft: emptyDraft() });
+                },
+              },
+              t("mcp.add"),
+            ),
+            h(
+              ActionButton,
+              { variant: "outline", disabled: pending === "mcpRawLoad", onClick: openMcpRaw },
+              t("mcp.editJson"),
+            ),
+            h(
+              ActionButton,
+              { variant: "outline", disabled: pending === "mcpRefresh", onClick: refreshMcp },
+              t("skills.refresh"),
+            ),
+            h("span", { className: "ske-surface-count" }, t("mcp.count", { count: mcpServers.length })),
+          ),
+          mcpForm !== null ? mcpFormCard() : null,
+          mcpText !== null ? mcpRawCard() : null,
+          mcpSnapshot !== null && mcpSnapshot.available === false
+            ? h("div", { className: "ske-mcp-error" }, t("mcp.unavailable"))
+            : null,
+          mcpServers.length === 0
+            ? h("div", { className: "ske-empty" }, t("mcp.empty"))
+            : h("div", { className: "ske-items" }, mcpServers.map((server) => mcpRow(server))),
+        );
+
+      const segment = HostSegmented
+        ? h(HostSegmented, {
+            value: view,
+            options: [
+              { value: "skills", label: t("view.skills") },
+              { value: "mcp", label: t("view.mcp") },
+            ],
+            onChange: (value) => setView(value === "mcp" ? "mcp" : "skills"),
+          })
+        : h(
+            "div",
+            { className: "ske-mcp-actions" },
+            h(
+              ActionButton,
+              { variant: view === "skills" ? "primary" : "outline", onClick: () => setView("skills") },
+              t("view.skills"),
+            ),
+            h(
+              ActionButton,
+              { variant: view === "mcp" ? "primary" : "outline", onClick: () => setView("mcp") },
+              t("view.mcp"),
+            ),
+          );
+
       // One preset group: the summary is always visible, the skill list only when
       // the group is open. Both surfaces share the open set, and every group starts
       // collapsed.
@@ -1328,10 +2168,19 @@ window.__ModuleLoader__.load({
             // can stay one compact row of controls.
             skillsRoot === "" ? null : h(PathText, { className: "ske-surface-path", value: skillsRoot }),
           ),
-          h("span", { className: "ske-surface-count" }, t("skills.count", { count: skills.length })),
+          h(
+            "span",
+            { className: "ske-surface-count" },
+            view === "mcp"
+              ? t("mcp.count", { count: mcpServers.length })
+              : t("skills.count", { count: skills.length }),
+          ),
         ),
         pinRow,
-        h(
+        h("div", { className: "ske-segment" }, segment),
+        view === "mcp"
+          ? mcpView()
+          : h(
           "section",
           { className: "ske-section" },
           // Toolbar: what the next add uses, plus a manual rescan.
@@ -1526,6 +2375,8 @@ window.__ModuleLoader__.load({
       const pageStateStore = createStore(null);
       // Which preset groups are open; session-scoped and shared by both surfaces.
       const expandedStore = createStore(new Set());
+      // MCP servers: one shared snapshot so both entry points agree.
+      const mcpStore = createStore(null);
       // Frame-level feedback state; the toast entry below renders it.
       const noticeStore = createStore(null);
       let noticeTimer;
@@ -1565,6 +2416,7 @@ window.__ModuleLoader__.load({
           sidebarSupportedStore,
           pageStateStore,
           expandedStore,
+          mcpStore,
           showNotice,
           setSidebarEnabled,
         },

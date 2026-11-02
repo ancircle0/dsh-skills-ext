@@ -1,6 +1,6 @@
 {
   "name": "@ancircle0/dsh-skills-ext",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "DSH Harness plugin: keep preset skill directories and link their skills into the user skill root (directory junction on Windows, symlink elsewhere).",
   "type": "module",
   "main": "index.js",
@@ -50,8 +50,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "node --check index.js && node --check client.js && node --check lib/core.js && node --check lib/service.js",
-    "test": "node test/core.test.mjs",
+    "check": "node --check index.js && node --check client.js && node --check lib/core.js && node --check lib/mcp.js && node --check lib/mcp-runtime.js && node --check lib/service.js",
+    "test": "node test/core.test.mjs && node test/mcp.test.mjs && node test/i18n.test.mjs",
     "verify": "npm run check && npm test",
     "pack:check": "npm pack --dry-run"
   },
@@ -59,6 +59,7 @@
     "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/dsh-client-store": "^0.1.7-rc.0 || ^0.2.0-rc.1 || ^0.2.1-rc.0",
     "@deepseek-ai/dsh-client-ui-primitives": "^0.1.7-rc.0 || ^0.2.0-rc.1 || ^0.2.1-rc.0",
+    "@deepseek-ai/dsh-mcp-client": "^0.1.7-rc.0 || ^0.2.0-rc.1 || ^0.2.1-rc.0",
     "@deepseek-ai/dsh-typert-protocol": "^0.1.7-rc.0 || ^0.2.0-rc.1 || ^0.2.1-rc.0"
   },
   "dsh": {

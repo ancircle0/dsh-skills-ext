@@ -26,13 +26,17 @@
 - **批量链接**：每个路径右侧一个按钮 —— 未全部链接时为「链接」（一次链接该路径下所有未链接技能），全部链接后变为「取消链接」（一次解除该路径下属于它的链接）。结果以「已链接 N 个（跳过 X，失败 Y）」汇报；占用的名字记为失败，不会被覆盖。
 - **侧边栏图标开关**：页面顶部一行「在侧边栏常驻图标」，控件优先使用宿主自带的 `Switch`；宿主未向插件暴露该模块时退回几何一致的备用开关。默认开启，按浏览器记忆（localStorage）；关掉后图标与面板一起移除，若面板正打开会先回到会话。
 - **导航图标注入**：设置面板的 section API 没有图标插槽，因此像归档管理那样在导航行挂载后用 CSS mask + `currentColor` 绘制本插件图标。全程 best-effort：选择器变化、不支持 mask 等任何失败都撤掉标记与样式表、保留默认齿轮，不抛错、不白屏。
+- **MCP 服务器**：页面顶部分段切到「MCP 服务器」即可管理。列表存在插件私有目录的 `mcp.json`（JSON、明文、可手改），每个启用的服务器在运行时以 `ctx.plugin('@deepseek-ai/dsh-mcp-client', config)` 挂载，工具以 `mcp__<serverName>__<tool>` 出现在模型工具表；禁用/删除/改参数即时 unmount/remount，**不写 profile 组合文件**。
+  - 行内显示 serverName、传输方式、状态（连接中 / 运行中 / 已停用 / 失败）与工具数；展开可编辑、重启、删除，摘要行右侧是启停开关。
+  - 新增/编辑表单支持 stdio 与 streamable-http 两种传输；「命令 / 工作目录 / 参数」旁有「选择目录」按钮，复用宿主原生目录选择器并把路径插入光标处（含空格自动加引号）。
+  - 「编辑 JSON」直接编辑 `mcp.json` 原文，保存时接受 `servers` 数组、裸数组、`mcpServers` 对象三种形状（后两者自动推断 transport），便于从其他 agent 配置粘贴。
 
 ## 路径
 
 | 用途 | 位置 |
 |---|---|
 | 技能根目录（链接目标） | `$DSH_HOME/skills`，默认 `~/.dsh/skills` |
-| 插件私有配置 | `$DSH_HOME/skills-ext/presets.json`（预设路径）、`$DSH_HOME/skills-ext/settings.json`（扫描层级等设置） |
+| 插件私有配置 | `$DSH_HOME/skills-ext/presets.json`（预设路径）、`settings.json`（扫描层级等设置）、`mcp.json`（MCP 服务器列表） |
 
 路径全部在宿主侧按平台解析（`$DSH_HOME`，未设置时用 `os.homedir()` 加 `.dsh`，再用 `path.join` 拼接 `skills`），所以 Windows 上是 `%USERPROFILE%\.dsh\skills`，macOS / Linux 上是 `~/.dsh/skills`；代码里不出现任何具体机器的绝对路径。
 
@@ -51,7 +55,7 @@
 ## 兼容性
 
 - 需要目标 DSH 版本提供 `settings.section`、`sidebar.panellist`、`main`、`shell.overlay` 插槽与 `ctx.remote`（本插件在 `0.2.1-rc.3` 上开发验证）。
-- **宿主依赖以 `peerDependencies` 声明**，由 DSH 运行时提供，插件不自带副本：`@deepseek-ai/cordis`、`@deepseek-ai/dsh-typert-protocol`（Host 侧服务与 Remote 标记）、`@deepseek-ai/dsh-client-ui-primitives`、`@deepseek-ai/dsh-client-store`（客户端控件与状态）。
+- **宿主依赖以 `peerDependencies` 声明**，由 DSH 运行时提供，插件不自带副本：`@deepseek-ai/cordis`、`@deepseek-ai/dsh-typert-protocol`（Host 侧服务与 Remote 标记）、`@deepseek-ai/dsh-client-ui-primitives`、`@deepseek-ai/dsh-client-store`（客户端控件与状态）、`@deepseek-ai/dsh-mcp-client`（MCP 服务器桥，缺失时页面会提示不可用）。
 - 客户端拿不到某个网格件时（老宿主），相应位置退回等价的最小实现，不会抛错或白屏；设置导航图标是 best-effort DOM 增强，失败保留默认齿轮。
 
 ## 结构
@@ -61,9 +65,13 @@
 | `index.js` | Host 入口，导出 `SkillsExtService` |
 | `lib/service.js` | Cordis 服务类：`TypertRemoteService` + `@Remote` 标记，方法返回页面快照、失败抛 `RemoteError` |
 | `lib/core.js` | 纯文件系统逻辑：预设读写、技能扫描、链接状态、链接创建/删除 |
-| `client.js` | Web 端：设置页/侧边栏面板、吐司、导航图标注入、Remote 客户端 |
+| `lib/mcp.js` | 纯逻辑：`mcp.json` 读写、服务器校验、导入解析（`servers` / 数组 / `mcpServers`） |
+| `lib/mcp-runtime.js` | 每个服务器一个 `ctx.plugin('@deepseek-ai/dsh-mcp-client', config)`，负责挂载/卸载/重启与状态 |
+| `client.js` | Web 端：设置页/侧边栏面板、技能与 MCP 两个视图、吐司、导航图标注入、Remote 客户端 |
 | `locale/*.json` | 插件在插件列表中的标题与描述（中/英） |
 | `test/core.test.mjs` | 核心逻辑测试（临时目录 + 真实链接创建/删除） |
+| `test/mcp.test.mjs` | MCP 列表测试（校验、导入三种形状、文件往返、坏文件容错） |
+| `test/i18n.test.mjs` | 文案守卫：中英键一致、Host 错误码必须本地化、字典外不得有中文字面量 |
 | `test/asar-peek.mjs` | 开发辅助：直接从 DSH 的 `app.asar` 里读取并检索文件 |
 
 ## 开发

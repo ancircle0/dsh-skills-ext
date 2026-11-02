@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0
+
+**新增 MCP 服务器管理。**
+
+- **页面顶部加分段切换**：`技能` / `MCP 服务器`；MCP 页沿用折叠列表样式，行内显示 serverName、传输方式、状态徽章（连接中/运行中/已停用/失败）与工具数，展开可编辑/重启/删除，摘要行右侧是启停开关。
+- **服务器列表存在插件私有目录的 `mcp.json`**（JSON、明文、可手改），**不写 profile 组合**：每个启用的服务器由本插件在运行时 `ctx.plugin('@deepseek-ai/dsh-mcp-client', config)` 挂载，工具以 `mcp__<serverName>__<tool>` 注册，禁用/删除/改参数即 unmount/remount。
+- **新增/编辑表单**：serverName、传输方式（stdio / streamable-http）、命令、工作目录、参数（每行一个）、环境变量（每行 `KEY=VALUE`）、URL、请求头、备注、调用超时、启动失败即报错；命令/工作目录/参数三个字段带「选择目录」按钮，复用宿主原生目录选择器并把路径插入光标处（含空格自动加引号）。
+- **手动编辑 JSON**：直接展示 `mcp.json` 原文，保存时支持 `servers` 数组、裸数组与 `mcpServers` 对象三种形状（后两者自动推断 transport）。
+- **Host 新增 Remote**：`mcpState / mcpCreate / mcpUpdate / mcpRemove / mcpToggle / mcpRestart / mcpRaw / mcpSaveRaw`；`mcp.json` 与校验逻辑在 `lib/mcp.js`，挂载与状态在 `lib/mcp-runtime.js`。
+- **状态映射修正**：按 cordis `FiberState` 区分 `FAILED`（失败）与 `DISPOSED`（已停用），失败且无具体错误时给出排查提示。
+- 依赖新增 peer：`@deepseek-ai/dsh-mcp-client`；测试新增 `test/mcp.test.mjs`（校验/导入/文件往返）与 `test/i18n.test.mjs`（中英键一致、Host 错误码必须本地化、字典外不得有中文字面量）。
+
 ## 0.4.1
 
 - **修复深色模式下扫描层级下拉的弹出列表看不清**：原生 `<select>` 的弹出层由浏览器绘制，此前只设了控件文字色（深色下为白色）却没设 `option` 背景，于是白底白字。现在给 `option` 使用 `--dsw-alias-bg-overlay` / `--dsw-alias-label-primary`，控件本身用 `--dsw-alias-bg-layer-1`，并按页面实际背景亮度设置 `color-scheme`，让原生装饰（边框、滚动条、选中高亮）也跟随主题。
