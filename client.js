@@ -273,15 +273,18 @@ window.__ModuleLoader__.load({
 
     // ---- locale dictionaries -------------------------------------------------
     const ZH = {
-      "settings.nav": "Skills 管理",
+      "settings.nav": "Skills与MCP管理",
       "settings.pin": "在侧边栏常驻图标",
       "settings.pinDesc": "开启后在侧边栏显示本插件图标，点开在中间列打开本页。",
       "settings.pinUnsupported": "当前 DSH 版本没有侧边栏面板入口，无法显示图标。",
       "settings.on": "已开启",
       "settings.off": "已关闭",
       "page.title": "Skills 管理",
+      "page.heading": "Skills与MCP管理",
       "page.intro":
         "维护预设的技能目录，并把其中的技能链接到当前 DSH 用户技能目录。链接使用目录联接（junction），解除链接只删除链接，源目录不受影响。",
+      "page.introMcp":
+        "管理 MCP 服务器：列表保存在本插件的 mcp.json 里，每个启用的服务器由本插件在运行时挂载，工具以 mcp__<名称>__<工具> 出现在模型工具表中；编辑、启停或删除会即时重连该服务器。",
       "presets.title": "预设路径",
       "presets.scanDepth": "扫描层级",
       "presets.scanDepthOption": "{depth} 级",
@@ -344,6 +347,7 @@ window.__ModuleLoader__.load({
       "mcp.restarted": "已重启 {name}",
       "mcp.rawSaved": "已保存 JSON",
       "mcp.toolCount": "{count} 个工具",
+      "mcp.toolsTitle": "工具（{count}）",
       "mcp.noTools": "已连接但尚未注册工具：该服务器可能不支持 tools，或连接失败（详见宿主日志）",
       "mcp.failedHint": "启动失败：命令或参数不对，或依赖/环境缺失（详见宿主日志）。",
       "mcp.envKeys": "环境变量：{keys}",
@@ -399,7 +403,7 @@ window.__ModuleLoader__.load({
     };
 
     const EN = {
-      "settings.nav": "Skills Manager",
+      "settings.nav": "Skills & MCP",
       "settings.pin": "Keep the sidebar icon",
       "settings.pinDesc":
         "Show this plugin's icon in the sidebar; clicking it opens this page in the center column.",
@@ -407,9 +411,12 @@ window.__ModuleLoader__.load({
         "This DSH version has no sidebar panel entry, so the icon cannot be shown.",
       "settings.on": "On",
       "settings.off": "Off",
-      "page.title": "Skills Manager",
+      "page.title": "Skills",
+      "page.heading": "Skills & MCP",
       "page.intro":
         "Maintain preset skill directories and link the skills they contain into this DSH user skill root. Linking creates a directory junction; unlinking removes only the link and leaves the source untouched.",
+      "page.introMcp":
+        "Manage MCP servers: the list lives in this plugin's mcp.json and each enabled server is mounted at runtime, so its tools appear as mcp__<server>__<tool>. Editing, enabling or deleting reconnects that server right away.",
       "presets.title": "Preset paths",
       "presets.scanDepth": "Scan depth",
       "presets.scanDepthOption": "{depth}",
@@ -474,6 +481,7 @@ window.__ModuleLoader__.load({
       "mcp.restarted": "Restarted {name}",
       "mcp.rawSaved": "JSON saved",
       "mcp.toolCount": "{count} tools",
+      "mcp.toolsTitle": "Tools ({count})",
       "mcp.noTools": "Connected but no tools are registered: the server may not expose tools, or the connection failed (see the host log)",
       "mcp.failedHint": "Startup failed: check the command, its arguments, and the dependencies (see the host log).",
       "mcp.envKeys": "Environment: {keys}",
@@ -532,6 +540,8 @@ window.__ModuleLoader__.load({
     const CSS = `
 .ske-page{display:flex;flex-direction:column;gap:18px;padding:0 0 24px;max-width:920px;color:var(--dsw-alias-label-primary,inherit);font-size:14px;line-height:20px;}
 .ske-surface-head{display:flex;align-items:center;gap:10px;padding:0 0 2px;}
+.ske-page-head{display:flex;align-items:center;gap:8px;padding:0 0 2px;}
+.ske-page-title{font-size:18px;line-height:26px;font-weight:600;color:var(--dsw-alias-label-primary,inherit);}
 .ske-surface-heading{display:flex;align-items:center;gap:6px;flex:1;min-width:0;}
 .ske-surface-title{min-width:0;font-weight:500;font-size:16px;line-height:24px;color:var(--dsw-alias-label-primary,inherit);}
 .ske-surface-count{flex:none;font-size:12px;line-height:16px;color:var(--dsw-alias-label-secondary,inherit);}
@@ -577,7 +587,7 @@ window.__ModuleLoader__.load({
 .ske-row-sub{font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary,inherit);opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ske-row-actions{flex:none;display:flex;align-items:center;gap:6px;}
 .ske-items{display:flex;flex-direction:column;gap:0;}
-.ske-segment{display:flex;align-items:center;gap:8px;}
+.ske-segment{display:flex;align-items:center;gap:8px;margin-bottom:-6px;}
 .ske-item{border:none;border-radius:0;}
 .ske-item + .ske-item{border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));}
 .ske-item-row{gap:8px;padding:14px 0;border-radius:8px;}
@@ -593,10 +603,18 @@ window.__ModuleLoader__.load({
 .ske-mcp-name{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ske-mcp-card{display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));border-radius:10px;}
 .ske-mcp-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.ske-mcp-card-title{font-size:13px;font-weight:500;}
+.ske-mcp-card-title{display:flex;align-items:baseline;gap:8px;min-width:0;font-size:13px;font-weight:500;}
+.ske-mcp-card-path{min-width:0;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;word-break:normal;}
 .ske-mcp-hint{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);word-break:break-all;}
 .ske-mcp-error{font-size:12px;line-height:18px;color:var(--dsw-alias-state-error-primary,#d94a4a);white-space:pre-wrap;}
 .ske-mcp-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+.ske-mcp-tools{display:flex;flex-direction:column;gap:4px;}
+.ske-mcp-tools-title{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);}
+.ske-mcp-tools-list{display:flex;flex-direction:column;gap:2px;max-height:260px;overflow-y:auto;}
+.ske-mcp-tool{display:flex;flex-direction:column;padding:3px 0;border-top:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.14));}
+.ske-mcp-tool:first-child{border-top:none;}
+.ske-mcp-tool-name{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:18px;color:var(--dsw-alias-label-primary,inherit);}
+.ske-mcp-tool-desc{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,inherit);}
 .ske-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
 .ske-field{display:flex;flex-direction:column;gap:4px;min-width:0;}
 .ske-field-inline{display:flex;align-items:center;gap:8px;}
@@ -1505,6 +1523,20 @@ window.__ModuleLoader__.load({
 
       const refreshMcp = () => mcpCall("mcpRefresh", () => remote.mcpState());
 
+      /** Re-read the MCP snapshot without touching the busy state or the toast. */
+      const refreshMcpSilently = React.useCallback(() => {
+        if (remote === null || remote === undefined) return;
+        void (async () => {
+          try {
+            const snapshot = readAnswer(await remote.mcpState());
+            if (!alive.current || mcpStore === null) return;
+            mcpStore.set(snapshot);
+          } catch {
+            /* keep the last snapshot */
+          }
+        })();
+      }, [remote, mcpStore]);
+
       const toggleMcp = (server) =>
         mcpCall(
           `mcpToggle:${server.id}`,
@@ -1774,6 +1806,14 @@ window.__ModuleLoader__.load({
               { className: "ske-mcp-card-title" },
               mcpForm.mode === "edit" ? t("mcp.form.edit", { name: draft.serverName }) : t("mcp.form.create"),
             ),
+            // Save and cancel sit with the title so the form never needs scrolling to
+            // reach them.
+            h(
+              "div",
+              { className: "ske-mcp-actions" },
+              h(ActionButton, { variant: "primary", disabled: pending !== null, onClick: submitMcpForm }, t("mcp.save")),
+              h(ActionButton, { variant: "outline", onClick: () => setMcpForm(null) }, t("mcp.cancel")),
+            ),
           ),
           h(
             "div",
@@ -1816,19 +1856,6 @@ window.__ModuleLoader__.load({
             mcpSwitch(draft.failOnStartupError, (next) => update({ failOnStartupError: next }), t("mcp.field.failOnStartup")),
             h("span", { className: "ske-field-label" }, t("mcp.field.failOnStartup")),
           ),
-          h(
-            "div",
-            { className: "ske-mcp-actions" },
-            h(ActionButton, { variant: "primary", disabled: pending !== null, onClick: submitMcpForm }, t("mcp.save")),
-            h(
-              ActionButton,
-              {
-                variant: "outline",
-                onClick: () => setMcpForm(null),
-              },
-              t("mcp.cancel"),
-            ),
-          ),
         );
       };
 
@@ -1839,11 +1866,23 @@ window.__ModuleLoader__.load({
           h(
             "div",
             { className: "ske-mcp-card-head" },
-            h("span", { className: "ske-mcp-card-title" }, t("mcp.json.title")),
             h(
               "span",
-              { className: "ske-mcp-hint" },
-              mcpSnapshot && mcpSnapshot.file ? mcpSnapshot.file : "",
+              { className: "ske-mcp-card-title" },
+              t("mcp.json.title"),
+              mcpSnapshot && mcpSnapshot.file
+                ? h("span", { className: "ske-mcp-hint ske-mcp-card-path" }, mcpSnapshot.file)
+                : null,
+            ),
+            h(
+              "div",
+              { className: "ske-mcp-actions" },
+              h(
+                ActionButton,
+                { variant: "primary", disabled: pending === "mcpRawSave", onClick: saveMcpRaw },
+                t("mcp.json.save"),
+              ),
+              h(ActionButton, { variant: "outline", onClick: () => setMcpText(null) }, t("mcp.cancel")),
             ),
           ),
           h("div", { className: "ske-mcp-hint" }, t("mcp.json.hint")),
@@ -1854,16 +1893,6 @@ window.__ModuleLoader__.load({
             value: mcpText ?? "",
             onChange: (event) => setMcpText(event.target.value),
           }),
-          h(
-            "div",
-            { className: "ske-mcp-actions" },
-            h(
-              ActionButton,
-              { variant: "primary", disabled: pending === "mcpRawSave", onClick: saveMcpRaw },
-              t("mcp.json.save"),
-            ),
-            h(ActionButton, { variant: "outline", onClick: () => setMcpText(null) }, t("mcp.cancel")),
-          ),
         );
 
       const mcpRow = (server) => {
@@ -1892,27 +1921,6 @@ window.__ModuleLoader__.load({
             "span",
             { className: "ske-item-actions", onClick: stopEvent },
             mcpSwitch(server.enabled !== false, () => toggleMcp(server), server.serverName),
-          ),
-        );
-        const body = h(
-          "div",
-          { className: "ske-item-body" },
-          h("div", { className: "ske-row-sub" }, server.endpoint || ""),
-          server.note ? h("div", { className: "ske-row-desc" }, server.note) : null,
-          server.env ? h("div", { className: "ske-row-sub" }, t("mcp.envKeys", { keys: Object.keys(server.env).join(", ") })) : null,
-          server.headers
-            ? h("div", { className: "ske-row-sub" }, t("mcp.headerKeys", { keys: Object.keys(server.headers).join(", ") }))
-            : null,
-          status.error !== undefined
-            ? h("div", { className: "ske-mcp-error" }, status.error)
-            : status.phase === "failed"
-              ? h("div", { className: "ske-mcp-error" }, t("mcp.failedHint"))
-              : status.phase === "active" && status.toolCount === 0
-                ? h("div", { className: "ske-mcp-hint" }, t("mcp.noTools"))
-                : null,
-          h(
-            "div",
-            { className: "ske-mcp-actions" },
             h(
               ActionButton,
               {
@@ -1951,6 +1959,40 @@ window.__ModuleLoader__.load({
               t("presets.remove"),
             ),
           ),
+        );
+        const body = h(
+          "div",
+          { className: "ske-item-body" },
+          server.env ? h("div", { className: "ske-row-sub" }, t("mcp.envKeys", { keys: Object.keys(server.env).join(", ") })) : null,
+          server.headers
+            ? h("div", { className: "ske-row-sub" }, t("mcp.headerKeys", { keys: Object.keys(server.headers).join(", ") }))
+            : null,
+          status.error !== undefined
+            ? h("div", { className: "ske-mcp-error" }, status.error)
+            : status.phase === "failed"
+              ? h("div", { className: "ske-mcp-error" }, t("mcp.failedHint"))
+              : status.phase === "active" && status.toolCount === 0
+                ? h("div", { className: "ske-mcp-hint" }, t("mcp.noTools"))
+                : null,
+          Array.isArray(server.tools) && server.tools.length > 0
+            ? h(
+                "div",
+                { className: "ske-mcp-tools" },
+                h("div", { className: "ske-mcp-tools-title" }, t("mcp.toolsTitle", { count: server.tools.length })),
+                h(
+                  "div",
+                  { className: "ske-mcp-tools-list" },
+                  server.tools.map((tool) =>
+                    h(
+                      "div",
+                      { className: "ske-mcp-tool", key: tool.name },
+                      h("span", { className: "ske-mcp-tool-name" }, tool.name),
+                      tool.description === "" ? null : h("span", { className: "ske-mcp-tool-desc" }, tool.description),
+                    ),
+                  ),
+                ),
+              )
+            : null,
         );
         if (!HostDisclosureRow) {
           return h(
@@ -2047,6 +2089,29 @@ window.__ModuleLoader__.load({
               t("view.mcp"),
             ),
           );
+
+      // A freshly mounted server reports `pending` until its connection settles, and
+      // nothing emits an event when it does — the snapshot the mutation returned was
+      // taken the instant it mounted. Poll quietly while anything is pending, bounded
+      // so a server that never settles cannot poll forever.
+      const mcpPollRef = React.useRef(0);
+      React.useEffect(() => {
+        if (view !== "mcp") {
+          mcpPollRef.current = 0;
+          return undefined;
+        }
+        const waiting = mcpServers.some((server) => (server.status?.phase ?? "stopped") === "pending");
+        if (!waiting) {
+          mcpPollRef.current = 0;
+          return undefined;
+        }
+        if (mcpPollRef.current >= 20) return undefined;
+        const timer = setTimeout(() => {
+          mcpPollRef.current += 1;
+          refreshMcpSilently();
+        }, 700);
+        return () => clearTimeout(timer);
+      }, [view, mcpServers, refreshMcpSilently]);
 
       // One preset group: the summary is always visible, the skill list only when
       // the group is open. Both surfaces share the open set, and every group starts
@@ -2149,24 +2214,38 @@ window.__ModuleLoader__.load({
         );
       };
 
+      // The path shown beside the view title: the link target for skills, the list
+      // file for MCP servers.
+      const contextPath =
+        view === "mcp"
+          ? mcpSnapshot !== null && mcpSnapshot !== undefined && typeof mcpSnapshot.file === "string"
+            ? mcpSnapshot.file
+            : ""
+          : skillsRoot;
+
       return h(
         "div",
         { className: surface === "panel" ? "ske-page ske-panel" : "ske-page" },
+        // Page heading; the view's own header sits below the pin block instead.
+        h("div", { className: "ske-page-head" }, h("span", { className: "ske-page-title" }, t("page.heading"))),
+        pinRow,
+        // The switch sits directly above the view header, so changing it reads as the
+        // header changing rather than as two unrelated blocks.
+        h("div", { className: "ske-segment" }, segment),
         h(
           "div",
           { className: "ske-surface-head" },
           h(
             "div",
             { className: "ske-surface-heading" },
-            h("span", { className: "ske-surface-title" }, t("page.title")),
+            h("span", { className: "ske-surface-title" }, view === "mcp" ? t("view.mcp") : t("page.title")),
             h(
               Hint,
-              { label: t("page.intro") },
+              { label: view === "mcp" ? t("page.introMcp") : t("page.intro") },
               h("span", { className: "ske-tip-mark" }, h(IconInfo, { size: 14 })),
             ),
-            // The link target reads as part of the page title, so the toolbar below
-            // can stay one compact row of controls.
-            skillsRoot === "" ? null : h(PathText, { className: "ske-surface-path", value: skillsRoot }),
+            // The context path (link target, or the MCP list file) reads next to it.
+            contextPath === "" ? null : h(PathText, { className: "ske-surface-path", value: contextPath }),
           ),
           h(
             "span",
@@ -2176,8 +2255,6 @@ window.__ModuleLoader__.load({
               : t("skills.count", { count: skills.length }),
           ),
         ),
-        pinRow,
-        h("div", { className: "ske-segment" }, segment),
         view === "mcp"
           ? mcpView()
           : h(

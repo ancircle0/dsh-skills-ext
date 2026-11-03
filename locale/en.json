@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Skills Manager",
-    "description": "Maintain preset skill directories from a Settings sidebar page, list the skills inside them, and link or unlink any single skill into .dsh/skills as a directory junction that never touches the source folder."
+    "title": "Skills & MCP",
+    "description": "Maintain preset skill directories and MCP servers from one Settings page: list the skills inside each preset and link or unlink them into .dsh/skills as directory junctions that never touch the source folder, and add, edit, enable or disable MCP servers."
   }
 }
