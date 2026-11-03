@@ -1,21 +1,24 @@
 # @ancircle0/dsh-skills-ext
 
-[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）插件：维护一组**预设技能目录**，把其中的技能**链接**进当前 DSH 用户技能目录，或随时**解除链接**。
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）插件，页面显示名为 **Skills与MCP管理**：一处维护**预设技能目录**（把其中的技能**链接**进当前 DSH 用户技能目录，或随时**解除链接**），同时管理 **MCP 服务器**（新增 / 编辑 / 启停 / 重启 / 删除，并把它们的工具接进模型工具表）。
 
 - 链接使用**目录联接（junction，Windows，无需管理员权限）**，其他平台使用**符号链接**；
 - 解除链接**只删除链接本身**，源目录与其中的文件完全不受影响；
-- 链接/解除链接后**立即生效，不用重启也不用新建会话**：插件随后 ① 让技能注册表失效缓存（`invalidateCache()`：`revision + 1`、清空收集缓存、广播 `skills/change`），模型在当前会话的**下一条消息**就能看到技能增减；② 再广播一次"配置已变"的刷新信号，让 `/` 技能选择器这类**客户端缓存**也重拉——所以下次打开 `/` 就是最新结果（正在进行的那一次请求不会中途改变）。
+- 链接/解除链接后**立即生效，不用重启也不用新建会话**：插件随后 ① 让技能注册表失效缓存（`invalidateCache()`：`revision + 1`、清空收集缓存、广播 `skills/change`），模型在当前会话的**下一条消息**就能看到技能增减；② 再广播一次"配置已变"的刷新信号，让 `/` 技能选择器这类**客户端缓存**也重拉——所以下次打开 `/` 就是最新结果（正在进行的那一次请求不会中途改变）；
+- MCP 服务器在运行时以 `ctx.plugin('@deepseek-ai/dsh-mcp-client', config)` 挂载，工具以 `mcp__<serverName>__<tool>` 出现，编辑/启停/删除即时重连，**不写 profile 组合文件**。
 
-> English: a DSH Harness plugin that keeps preset skill directories and links/unlinks the skills inside them into the user skill root. Linking creates a directory junction on Windows (no admin rights needed) and a symlink elsewhere; unlinking removes only the link and never touches the source directory.
+> English: a DSH Harness plugin shown as **Skills & MCP**. It keeps preset skill directories and links/unlinks the skills inside them into the user skill root (directory junction on Windows, symlink elsewhere; unlinking never touches the source), and manages MCP servers by mounting the MCP client at runtime so their tools join the model's tool set.
 
 ## 界面入口
 
 同一页内容有两个入口，位置与内置的「归档管理」一致：
 
-- **设置面板侧边栏**的一页「Skills 管理」（`settings.section`），导航行使用本插件自己的图标；
+- **设置面板侧边栏**的一页「**Skills与MCP管理**」（`settings.section`），导航行使用本插件自己的图标；
 - **侧边栏全局面板**图标（`sidebar.panellist` + `main`），点开在中间列显示同一页面（仅内边距不同，没有第二份视图）。
 
-两个入口共享同一份页面快照，任一处添加/删除/链接都会立刻反映到另一处。提示信息走 `shell.overlay` 的浮层吐司（与宿主自带的 `plugin-manager.refresh-toast` 等同层），不占布局、不引起跳动。
+两个入口共享同一份页面快照、同一份 MCP 列表与同一套展开状态，任一处改动都会立刻反映到另一处。提示信息走 `shell.overlay` 的浮层吐司（与宿主自带的 `plugin-manager.refresh-toast` 等同层），不占布局、不引起跳动。
+
+页面结构：**固定标题**（Skills与MCP管理）→ 常驻图标开关 → **「技能 / MCP 服务器」分段切换** → 视图头（标题 + ⓘ + 路径 + 计数，随切换变化）→ 工具栏与列表。分段切换紧贴视图头，切换时标题、路径与计数一起变。
 
 ## 功能
 
@@ -26,10 +29,44 @@
 - **批量链接**：每个路径右侧一个按钮 —— 未全部链接时为「链接」（一次链接该路径下所有未链接技能），全部链接后变为「取消链接」（一次解除该路径下属于它的链接）。结果以「已链接 N 个（跳过 X，失败 Y）」汇报；占用的名字记为失败，不会被覆盖。
 - **侧边栏图标开关**：页面顶部一行「在侧边栏常驻图标」，控件优先使用宿主自带的 `Switch`；宿主未向插件暴露该模块时退回几何一致的备用开关。默认开启，按浏览器记忆（localStorage）；关掉后图标与面板一起移除，若面板正打开会先回到会话。
 - **导航图标注入**：设置面板的 section API 没有图标插槽，因此像归档管理那样在导航行挂载后用 CSS mask + `currentColor` 绘制本插件图标。全程 best-effort：选择器变化、不支持 mask 等任何失败都撤掉标记与样式表、保留默认齿轮，不抛错、不白屏。
-- **MCP 服务器**：页面顶部分段切到「MCP 服务器」即可管理。列表存在插件私有目录的 `mcp.json`（JSON、明文、可手改），每个启用的服务器在运行时以 `ctx.plugin('@deepseek-ai/dsh-mcp-client', config)` 挂载，工具以 `mcp__<serverName>__<tool>` 出现在模型工具表；禁用/删除/改参数即时 unmount/remount，**不写 profile 组合文件**。
-  - 行内显示 serverName、传输方式、状态（连接中 / 运行中 / 已停用 / 失败）与工具数；展开可编辑、重启、删除，摘要行右侧是启停开关。
-  - 新增/编辑表单支持 stdio 与 streamable-http 两种传输；「命令 / 工作目录 / 参数」旁有「选择目录」按钮，复用宿主原生目录选择器并把路径插入光标处（含空格自动加引号）。
-  - 「编辑 JSON」直接编辑 `mcp.json` 原文，保存时接受 `servers` 数组、裸数组、`mcpServers` 对象三种形状（后两者自动推断 transport），便于从其他 agent 配置粘贴。
+- **MCP 服务器**：分段切到「MCP 服务器」即可管理。列表存在插件私有目录的 `mcp.json`（JSON、明文、可手改），每个启用的服务器在运行时以 `ctx.plugin('@deepseek-ai/dsh-mcp-client', config)` 挂载，工具以 `mcp__<serverName>__<tool>` 出现在模型工具表；禁用/删除/改参数即时 unmount/remount，**不写 profile 组合文件**。
+  - **折叠行**：serverName、传输方式、状态徽章（连接中 / 运行中 / 已停用 / 失败）与工具数；右侧依次是启停开关和 `编辑 / 重启 / 删除`（点这些按钮不会触发展开）。
+  - **展开行**：列出该服务器当前注册的工具名与说明（自动去掉 `mcp__<serverName>__` 前缀，过长时列表内部滚动），并显示失败原因或「已连接但未注册工具」提示；环境变量与请求头只显示键名，不显示值。
+  - **状态自动更新**：有处于「连接中」的条目时每 700ms 静默重拉一次快照（不置忙、不弹提示，最多 20 次），所以编辑保存后不必手动点刷新；启动失败按 cordis `FiberState` 判定并给出排查提示。
+  - **新增/编辑表单**：支持 stdio 与 streamable-http；命令、工作目录、参数、环境变量各占一行；「命令 / 工作目录 / 参数」旁有「选择目录」按钮（复用宿主原生目录选择器，把路径插入光标处，含空格自动加引号）；`保存 / 取消` 位于卡片标题行，长表单无需滚到底。备注字段可填写并保存，但不在列表里显示。
+  - **编辑 JSON**：直接编辑 `mcp.json` 原文（卡片标题旁显示文件路径），保存时接受 `servers` 数组、裸数组、`mcpServers` 对象三种形状（后两者按字段自动推断 transport），便于从其他 agent 配置粘贴。
+  - `serverName` 决定工具名前缀：改名等于改工具名，历史会话里的旧工具名不会自动迁移。
+
+  `mcp.json` 的形状（`id` 只用于本插件，`serverName` 决定工具前缀）：
+
+  ```json
+  {
+    "version": 1,
+    "servers": [
+      {
+        "id": "mymcp",
+        "serverName": "mymcp",
+        "transport": "stdio",
+        "enabled": true,
+        "command": "node",
+        "args": ["E:\\path\\to\\server\\dist\\index.js", "--iniPath", "C:\\path\\to\\config.ini"],
+        "cwd": "E:\\path\\to\\server",
+        "env": { "TOKEN": "..." },
+        "failOnStartupError": true
+      },
+      {
+        "id": "remote",
+        "serverName": "remote",
+        "transport": "streamable-http",
+        "enabled": true,
+        "url": "http://127.0.0.1:3000/mcp",
+        "headers": { "Authorization": "Bearer ..." }
+      }
+    ]
+  }
+  ```
+
+  注意 `command` 只放可执行文件（`node` / `npx`），脚本路径与 `--参数` 一律放进 `args`。
 
 ## 路径
 
@@ -46,15 +83,15 @@
 
 1. 侧边栏打开「**插件**」页；
 2. 点「**添加插件**」→「**安装第三方插件**」；
-3. 在「包名或地址」里填 `@ancircle0/dsh-skills-ext`（需要固定版本时填 `@ancircle0/dsh-skills-ext@0.2.1`），点「**安装**」。
+3. 在「包名或地址」里填 `@ancircle0/dsh-skills-ext`（需要固定版本时填 `@ancircle0/dsh-skills-ext@0.5.1`），点「**安装**」。
 
 安装后插件立即生效（安装即启用）。升级时在插件页卸载，再按上面步骤安装新版本。
 
-装好后从「设置 → Skills 管理」或侧边栏的 Skills 图标进入使用。
+装好后从「设置 → Skills与MCP管理」或侧边栏的对应图标进入使用。
 
 ## 兼容性
 
-- 需要目标 DSH 版本提供 `settings.section`、`sidebar.panellist`、`main`、`shell.overlay` 插槽与 `ctx.remote`（本插件在 `0.2.1-rc.3` 上开发验证）。
+- 需要目标 DSH 版本提供 `settings.section`、`sidebar.panellist`、`main`、`shell.overlay` 插槽与 `ctx.remote`（本插件在 `0.2.1-rc.3` 运行时 + `@deepseek-ai/dsh-mcp-client@0.2.1-rc.5` 上开发验证）。
 - **宿主依赖以 `peerDependencies` 声明**，由 DSH 运行时提供，插件不自带副本：`@deepseek-ai/cordis`、`@deepseek-ai/dsh-typert-protocol`（Host 侧服务与 Remote 标记）、`@deepseek-ai/dsh-client-ui-primitives`、`@deepseek-ai/dsh-client-store`（客户端控件与状态）、`@deepseek-ai/dsh-mcp-client`（MCP 服务器桥，缺失时页面会提示不可用）。
 - 客户端拿不到某个网格件时（老宿主），相应位置退回等价的最小实现，不会抛错或白屏；设置导航图标是 best-effort DOM 增强，失败保留默认齿轮。
 
@@ -77,8 +114,8 @@
 ## 开发
 
 ```bash
-npm run check     # 语法检查
-npm test          # 核心逻辑测试
+npm run check     # 语法检查（index / client / lib 各模块）
+npm test          # 三套测试：核心逻辑、MCP 列表、文案守卫
 npm run verify    # 两者都跑
 npm run pack:check
 ```
