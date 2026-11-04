@@ -361,6 +361,10 @@ window.__ModuleLoader__.load({
       "mcp.field.name": "serverName（决定工具名前缀）",
       "mcp.field.transport": "传输方式",
       "mcp.field.command": "命令",
+      "mcp.commandPreset": "内置运行时",
+      "mcp.commandPresetHint":
+        "只写入运行时名称（node / python / pnpm），挂载时解析为本机 DSH 自带的路径，换设备后仍然有效",
+      "mcp.commandCustom": "自定义",
       "mcp.field.args": "参数（每行一个）",
       "mcp.field.env": "环境变量（每行 KEY=VALUE）",
       "mcp.field.cwd": "工作目录（可选）",
@@ -495,6 +499,10 @@ window.__ModuleLoader__.load({
       "mcp.field.name": "serverName (the tool-name prefix)",
       "mcp.field.transport": "Transport",
       "mcp.field.command": "Command",
+      "mcp.commandPreset": "Bundled runtimes",
+      "mcp.commandPresetHint":
+        "Stores only the runtime name (node / python / pnpm); it is resolved to this machine's bundled path when the server mounts, so the list keeps working on another device",
+      "mcp.commandCustom": "Custom",
       "mcp.field.args": "Arguments (one per line)",
       "mcp.field.env": "Environment (KEY=VALUE per line)",
       "mcp.field.cwd": "Working directory (optional)",
@@ -625,6 +633,10 @@ window.__ModuleLoader__.load({
 .ske-mcp-json{min-height:220px;}
 .ske-pick-field{display:flex;align-items:flex-start;gap:6px;min-width:0;}
 .ske-pick-field > *:first-child{flex:1;min-width:0;}
+.ske-runtime-select{flex:none;max-width:170px;}
+.ske-command-field{display:flex;align-items:flex-start;gap:6px;min-width:0;width:100%;}
+.ske-command-input{flex:1;min-width:0;}
+.ske-field-readonly{color:var(--dsw-alias-label-secondary,inherit);background-color:var(--dsw-alias-bg-layer-1,transparent);border-style:dashed;cursor:default;}
 .ske-chevron-fallback{display:inline-flex;align-items:center;justify-content:center;width:14px;font-size:14px;line-height:1;color:var(--dsw-alias-label-secondary,inherit);}
 .ske-empty-tight{padding:6px 12px;}
 .ske-tag{flex:none;font-size:11px;line-height:16px;padding:0 6px;border-radius:6px;border:1px solid var(--dsw-alias-border-l1,rgba(128,128,128,.2));color:var(--dsw-alias-label-secondary,inherit);}
@@ -1773,9 +1785,55 @@ window.__ModuleLoader__.load({
               ),
         );
 
+      /** The add/edit card; the row body keeps showing status and the tool list. */
       const mcpFormCard = () => {
         const draft = mcpForm.draft;
         const update = (patch) => setMcpForm({ ...mcpForm, draft: { ...draft, ...patch } });
+        // Command presets: the runtimes DSH unpacked under its own home. Only the
+        // portable name is stored (`node` / `python` / `pnpm`) and the host expands it
+        // when the server mounts; the field shows that resolved path read-only, while
+        // picking "custom" clears it and makes it editable again.
+        const runtimes = mcpSnapshot !== null && Array.isArray(mcpSnapshot.runtimes) ? mcpSnapshot.runtimes : [];
+        const commandValue = String(draft.command ?? "").trim();
+        const matchedRuntime = runtimes.find((runtime) => runtime.id === commandValue);
+        const runtimeSelect =
+          runtimes.length === 0
+            ? null
+            : h(
+                "select",
+                {
+                  className: "ske-depth-select ske-runtime-select",
+                  value: matchedRuntime === undefined ? "__custom" : matchedRuntime.id,
+                  title: t("mcp.commandPresetHint"),
+                  "aria-label": t("mcp.commandPreset"),
+                  onChange: (event) => {
+                    const runtime = runtimes.find((entry) => entry.id === event.target.value);
+                    update({ command: runtime === undefined ? "" : runtime.id });
+                    if (runtime !== undefined) return;
+                    const input = fieldRefs.current.command;
+                    if (!input || typeof input.focus !== "function") return;
+                    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => input.focus());
+                    else input.focus();
+                  },
+                },
+                runtimes.map((runtime) =>
+                  h("option", { key: runtime.id, value: runtime.id }, `${runtime.label} ${runtime.version}`.trim()),
+                ),
+                h("option", { key: "__custom", value: "__custom" }, t("mcp.commandCustom")),
+              );
+        /** Read-only view of what a preset resolves to, written as a `$DSH_HOME` token. */
+        const runtimePath = (runtime) => {
+          const text = runtime.targetToken ?? runtime.target ?? "";
+          const props = {
+            className: "ske-field-input ske-field-readonly",
+            value: text,
+            title: runtime.target ?? text,
+            readOnly: true,
+            tabIndex: -1,
+            spellCheck: false,
+          };
+          return HostInput ? h(HostInput, props) : h("input", props);
+        };
         const transportOptions = [
           { value: "stdio", label: "stdio" },
           { value: "streamable-http", label: "streamable-http" },
@@ -1806,14 +1864,7 @@ window.__ModuleLoader__.load({
               { className: "ske-mcp-card-title" },
               mcpForm.mode === "edit" ? t("mcp.form.edit", { name: draft.serverName }) : t("mcp.form.create"),
             ),
-            // Save and cancel sit with the title so the form never needs scrolling to
-            // reach them.
-            h(
-              "div",
-              { className: "ske-mcp-actions" },
-              h(ActionButton, { variant: "primary", disabled: pending !== null, onClick: submitMcpForm }, t("mcp.save")),
-              h(ActionButton, { variant: "outline", onClick: () => setMcpForm(null) }, t("mcp.cancel")),
-            ),
+            mcpFormActions(),
           ),
           h(
             "div",
@@ -1821,9 +1872,39 @@ window.__ModuleLoader__.load({
             mcpField(t("mcp.field.name"), mcpTextInput(draft, update, "serverName", "github")),
             mcpField(t("mcp.field.transport"), transport),
           ),
-          // Command, working directory, arguments and environment each own a row.
+          // Command: preset select first, then the value, then the folder picker. A
+          // preset shows its resolved path read-only; "custom" types freely.
           draft.transport === "stdio"
-            ? mcpFieldRow(t("mcp.field.command"), mcpTextInput(draft, update, "command", "npx"), "command")
+            ? h(
+                "div",
+                { className: "ske-field" },
+                h("span", { className: "ske-field-label" }, t("mcp.field.command")),
+                h(
+                  "div",
+                  { className: "ske-command-field" },
+                  runtimeSelect,
+                  h(
+                    "div",
+                    { className: "ske-command-input" },
+                    matchedRuntime === undefined
+                      ? mcpTextInput(draft, update, "command", "node")
+                      : runtimePath(matchedRuntime),
+                  ),
+                  // A preset already points at a known binary, so the folder picker
+                  // only earns its place in custom mode.
+                  matchedRuntime === undefined
+                    ? h(
+                        ActionButton,
+                        {
+                          variant: "outline",
+                          disabled: pending === "pick:command",
+                          onClick: () => openDirectoryPicker("command"),
+                        },
+                        t("mcp.pickDir"),
+                      )
+                    : null,
+                ),
+              )
             : null,
           draft.transport === "stdio"
             ? mcpFieldRow(t("mcp.field.cwd"), mcpTextInput(draft, update, "cwd", ""), "cwd")
@@ -1858,6 +1939,15 @@ window.__ModuleLoader__.load({
           ),
         );
       };
+
+      /** Save and cancel for the add/edit card. */
+      const mcpFormActions = () =>
+        h(
+          "div",
+          { className: "ske-mcp-actions" },
+          h(ActionButton, { variant: "primary", disabled: pending !== null, onClick: submitMcpForm }, t("mcp.save")),
+          h(ActionButton, { variant: "outline", onClick: () => setMcpForm(null) }, t("mcp.cancel")),
+        );
 
       const mcpRawCard = () =>
         h(
