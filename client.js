@@ -651,9 +651,10 @@ window.__ModuleLoader__.load({
 
     // ---- icons ---------------------------------------------------------------
     // One mark everywhere — a skill card with a sparkle on its top-right corner.
-    // `icon.svg` (the plugin row) and the Settings-nav mask below reuse the same
-    // geometry, so the row, the sidebar button and the nav entry read as one
-    // icon. Every part is drawn with `currentColor` so themes need no overrides.
+    // `icon.svg` (the plugin row), the sidebar button and the Settings nav slot
+    // reuse the same geometry, so the row, the sidebar icon and the nav entry read
+    // as one mark. Every part is drawn with `currentColor` so themes need no
+    // overrides.
     /** Sidebar panel button and inline mark: the skill-card silhouette. */
     function IconSkills({ size = 16 }) {
       return h(
@@ -678,6 +679,16 @@ window.__ModuleLoader__.load({
           stroke: "none",
         }),
       );
+    }
+
+    /**
+     * The Settings nav row icon. The shell passes the box size and the active flag;
+     * `currentColor` already follows the row's theme, so no extra styling is needed.
+     * @param {{ size?: number }} props - slot owner props.
+     */
+    function SettingsNavIcon(props) {
+      const size = props && typeof props.size === "number" ? props.size : 16;
+      return h(IconSkills, { size });
     }
 
     // ---- action button -------------------------------------------------------
@@ -847,61 +858,10 @@ window.__ModuleLoader__.load({
     }
 
     // ---- Settings nav icon ---------------------------------------------------
-    // A Settings section has no icon option, so its nav row is claimed after it
-    // mounts: a marker attribute swaps the shell's gear for this mark through a
-    // CSS mask painted in `currentColor`. Strictly best-effort — any failure
-    // removes the marker and the stylesheet and leaves the gear in place, so a
-    // future shell layout change can never crash this plugin or blank the row.
-    const NAV_ICON_SELECTOR = '[role="dialog"] nav button';
-    const NAV_ICON_MARKER = "data-dsh-skills-ext-nav-icon";
-    const NAV_ICON_SIZE = 16;
-
-    /** The nav mask: the same skill-card mark, drawn for a 14px box. */
-    function navIconMaskSvg() {
-      return (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 14" fill="none" stroke="#000" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round">' +
-        '<rect x="1.5" y="5.4" width="7.9" height="7.2" rx="2.1"/>' +
-        '<path d="M3.9 8.2h3.1"/>' +
-        '<path d="M3.9 10.3h2.1"/>' +
-        '<path d="M11.3 0.7l0.85 1.45L13.6 3l-1.45 0.85L11.3 5.3l-0.85-1.45L9 3l1.45-0.85z" fill="#000" stroke="none"/>' +
-        '</svg>'
-      );
-    }
-
-    /**
-     * Turn an SVG source into a mask URL.
-     * @param {string} [svg] - SVG source; defaults to the plugin glyph.
-     * @returns {string}
-     */
-    function navIconMaskUrl(svg) {
-      return "data:image/svg+xml," + encodeURIComponent(svg === undefined ? navIconMaskSvg() : svg);
-    }
-
-    /**
-     * Build the stylesheet that paints the mask on a marked row.
-     * @param {string} maskUrl - mask image URL.
-     * @returns {string}
-     */
-    function navIconCss(maskUrl) {
-      return [
-        "[" + NAV_ICON_MARKER + "] > svg { display: none; }",
-        "[" + NAV_ICON_MARKER + "]::before {",
-        "  content: '';",
-        "  flex: none;",
-        "  width: " + NAV_ICON_SIZE + "px;",
-        "  height: " + NAV_ICON_SIZE + "px;",
-        "  background-color: currentColor;",
-        '  -webkit-mask-image: url("' + maskUrl + '");',
-        '  mask-image: url("' + maskUrl + '");',
-        "  -webkit-mask-repeat: no-repeat;",
-        "  mask-repeat: no-repeat;",
-        "  -webkit-mask-position: center;",
-        "  mask-position: center;",
-        "  -webkit-mask-size: " + NAV_ICON_SIZE + "px " + NAV_ICON_SIZE + "px;",
-        "  mask-size: " + NAV_ICON_SIZE + "px " + NAV_ICON_SIZE + "px;",
-        "}",
-      ].join("\n");
-    }
+    // The shell renders the row icon through the `settings.section.icon` slot
+    // (0.2.2+), so this plugin registers a component there instead of touching the
+    // row's DOM. A shell without that slot ignores the registration and keeps its
+    // own gear, which is the correct fallback — nothing here can blank a row.
 
     /**
      * Report a best-effort failure without ever throwing.
@@ -915,150 +875,6 @@ window.__ModuleLoader__.load({
         }
       } catch {
         /* logging must never break the fallback */
-      }
-    }
-
-    /**
-     * Whether this engine can paint the glyph as a CSS mask; when it cannot, the
-     * `::before` box would show as a solid square, so the gear is kept instead.
-     * @returns {boolean}
-     */
-    function supportsMaskImage() {
-      try {
-        const css = typeof globalThis === "undefined" ? undefined : globalThis.CSS;
-        if (!css || typeof css.supports !== "function") return true;
-        return css.supports("mask-image", 'url("x")') || css.supports("-webkit-mask-image", 'url("x")');
-      } catch {
-        return false;
-      }
-    }
-
-    /**
-     * Whether a nav row shows this plugin's section label.
-     * @param {string} rowText - the row's visible text.
-     * @param {string} wantedLabel - the current localized section label.
-     * @returns {boolean}
-     */
-    function isOwnNavRow(rowText, wantedLabel) {
-      const wanted = String(wantedLabel === null || wantedLabel === undefined ? "" : wantedLabel).trim();
-      if (wanted.length === 0) return false;
-      return String(rowText === null || rowText === undefined ? "" : rowText).trim() === wanted;
-    }
-
-    /**
-     * Claim the Settings nav row and paint this plugin's glyph on it, or keep
-     * the shell's gear when anything goes wrong. Never throws.
-     * @param {object} ctx - Client context, used only for `ctx.effect`.
-     * @param {() => string} resolveLabel - current localized section label.
-     */
-    function installSettingsNavIcon(ctx, resolveLabel) {
-      try {
-        if (typeof document === "undefined" || document === null) return;
-        if (typeof document.querySelectorAll !== "function") return;
-        if (!supportsMaskImage()) return;
-        ctx.effect(() => {
-          let styleTag = null;
-          let observer = null;
-          let disposed = false;
-          let scheduled = false;
-          const markedRows = new Set();
-          const fallback = (reason) => {
-            if (disposed) return;
-            disposed = true;
-            try {
-              if (observer) observer.disconnect();
-            } catch {
-              /* observer already gone */
-            }
-            observer = null;
-            for (const row of Array.from(markedRows)) {
-              try {
-                row.removeAttribute(NAV_ICON_MARKER);
-              } catch {
-                /* row may be gone */
-              }
-            }
-            markedRows.clear();
-            try {
-              if (styleTag && typeof styleTag.remove === "function") styleTag.remove();
-            } catch {
-              /* style already detached */
-            }
-            styleTag = null;
-            if (reason !== undefined) {
-              navIconWarn("[skills-ext] settings nav icon disabled; keeping the default icon", reason);
-            }
-          };
-          const sync = () => {
-            if (disposed) return;
-            try {
-              const wanted = resolveLabel();
-              const rows = document.querySelectorAll(NAV_ICON_SELECTOR);
-              const seen = new Set();
-              for (const row of Array.from(rows)) {
-                seen.add(row);
-                if (isOwnNavRow(row && row.textContent, wanted)) {
-                  try {
-                    row.setAttribute(NAV_ICON_MARKER, "");
-                    markedRows.add(row);
-                  } catch {
-                    /* row may be gone */
-                  }
-                } else if (markedRows.has(row)) {
-                  try {
-                    row.removeAttribute(NAV_ICON_MARKER);
-                  } catch {
-                    /* row may be gone */
-                  }
-                  markedRows.delete(row);
-                }
-              }
-              for (const row of Array.from(markedRows)) {
-                if (seen.has(row)) continue;
-                try {
-                  row.removeAttribute(NAV_ICON_MARKER);
-                } catch {
-                  /* row may be gone */
-                }
-                markedRows.delete(row);
-              }
-            } catch (error) {
-              fallback(error);
-            }
-          };
-          const schedule = () => {
-            if (scheduled || disposed) return;
-            scheduled = true;
-            const run = () => {
-              scheduled = false;
-              sync();
-            };
-            try {
-              if (typeof queueMicrotask === "function") queueMicrotask(run);
-              else run();
-            } catch {
-              run();
-            }
-          };
-          try {
-            if (!document.head || !document.body) return fallback;
-            styleTag = document.createElement("style");
-            styleTag.setAttribute("data-plugin", "dsh-skills-ext");
-            styleTag.setAttribute("data-plugin-css", "dsh-skills-ext/settings-nav-icon");
-            styleTag.textContent = navIconCss(navIconMaskUrl());
-            document.head.appendChild(styleTag);
-            if (typeof MutationObserver === "function") {
-              observer = new MutationObserver(schedule);
-              observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-            }
-            sync();
-          } catch (error) {
-            fallback(error);
-          }
-          return fallback;
-        }, "skills-ext: settings nav icon");
-      } catch (error) {
-        navIconWarn("[skills-ext] settings nav icon setup failed; keeping the default icon", error);
       }
     }
 
@@ -2693,9 +2509,20 @@ window.__ModuleLoader__.load({
         ),
       );
 
-      // Best-effort only: replaces the Settings nav row's default gear with this
-      // plugin's mark, and keeps the gear whenever anything is unavailable.
-      installSettingsNavIcon(ctx, () => t("settings.nav"));
+      // The Settings nav row icon is slot content now: the shell asks
+      // `settings.section.icon` for it, keyed by the section id. The id below must
+      // equal the section id above, or the shell silently keeps its own gear.
+      ctx.slots.inject("settings.section.icon", () =>
+        ctx.slots.register(
+          {
+            name: "settings.section.icon",
+            id: "skills-ext",
+            label: () => t("settings.nav"),
+            locale: NS,
+          },
+          SettingsNavIcon,
+        ),
+      );
 
       // The sidebar icon exists only while the preference is on, and only when
       // this shell actually declares the panel list slot.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3
+
+- **设置页导航图标改用宿主官方插槽**：DSH 0.2.2 起设置外壳通过 `settings.section.icon`（`root` / `list` / `inline`）渲染行图标，注册时 `id` 必须等于 `settings.section` 的 `id`（本插件为 `skills-ext`）。图标是纯 React 节点、`currentColor` 绘制，选中态/hover/明暗主题自动跟随。
+- **移除旧的 CSS mask DOM 增强**：`NAV_ICON_SELECTOR/MARKER/SIZE`、`navIconMaskSvg/navIconMaskUrl/navIconCss`、`supportsMaskImage`、`isOwnNavRow`、`installSettingsNavIcon`（含 MutationObserver 与 `<style data-plugin-css="dsh-skills-ext/settings-nav-icon">` 注入）全部删除 —— 那套在宿主升级后会与新插槽图标并排显示成「两个图标」。`navIconWarn` 保留（侧栏面板逻辑仍在用）。
+- 旧版宿主（无该插槽）注册被静默忽略、保留默认齿轮，其余功能不受影响。
+
 ## 0.5.2
 
 - **命令字段变成「下拉 + 输入」组合框**：下拉位于输入框**左侧**，列出 `$DSH_HOME/dsh-runtimes/<payload>/dependencies` 下 DSH 已解包的运行时（Node / Python / PNPM，带版本号）。选中内置运行时时，输入框改为**不可编辑**样式并显示 **`$DSH_HOME/...` 形式的路径**（不是本机绝对路径，避免误以为写死了路径），鼠标悬停可看完整路径；下拉末尾始终有「自定义」，选中即清空输入框恢复编辑，「选择目录」按钮也只在自定义时出现。存进去的始终是**运行时名称**（`node` / `python` / `pnpm`）或你手输的内容。
